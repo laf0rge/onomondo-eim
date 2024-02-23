@@ -81,7 +81,6 @@ rest_delete(ResourceId, Facility) ->
 
 % List the resource identifiers of currently pending REST resources
 rest_list(Facility) ->
-    mnesia:start(),
     Trans = fun() ->
 		    Q = qlc:q([X#rest.resourceId || X <- mnesia:table(rest), X#rest.facility == Facility]),
 		    qlc:e(Q)
