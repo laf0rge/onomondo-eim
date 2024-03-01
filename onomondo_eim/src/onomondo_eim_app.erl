@@ -47,6 +47,9 @@ start(_Type, _Args) ->
                {"/eco/list/", rest_handler, [eco, list]}
               ]}
     ]),
+
+    ok = mnesia_db:init(),
+
     {ok, _} = cowboy:start_clear(http_listener_rest,
 				 [{port, 8080}], %TODO: make port user configurable
 				 #{env => #{dispatch => Dispatch_REST}}

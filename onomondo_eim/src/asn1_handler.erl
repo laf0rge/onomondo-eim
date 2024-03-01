@@ -9,13 +9,20 @@
 -define(RESPONSE_HEADERS, #{<<"Content-Type">> => <<"application/x-gsma-rsp-asn1">>,
 			    <<"X-Admin-Protocol">> => <<"gsma/rsp/v2.1.0">>}).
 
+
+
+
 %GSMA SGP.32, section 6.3.2.1
-handle_asn1(_Req0, _State, {initiateAuthenticationRequestEsipa, EsipaReq}) ->
-	BaseUrl = maps:get(smdpAddress, EsipaReq),
+handle_asn1(Req0, _State, {initiateAuthenticationRequestEsipa, EsipaReq}) ->
 
 	% TODO: insert smdpAddress and/or eUICCInfo1 are optional fields in ESipa, which means they may be absent.
 	% However in ES9+ those fields are mandatory. This means we may need to fill in those fields here, from cached
 	% values.
+
+    {_, WorkState} = mnesia_db:work_pickup(maps:get(pid, Req0)),
+    BaseUrl = maps:get(smdpAddress, EsipaReq),
+    NewWorkState = WorkState#{smdpAddress => BaseUrl},
+    mnesia_db:work_putdown(maps:get(pid, Req0), NewWorkState),
 
 	% setup ES9+ request message
 	Es9Req = {initiateAuthenticationRequest, EsipaReq},
@@ -36,9 +43,9 @@ handle_asn1(_Req0, _State, {initiateAuthenticationRequestEsipa, EsipaReq}) ->
 	{initiateAuthenticationResponseEsipa, EsipaResp};
 
 %GSMA SGP.32, section 6.3.2.2
-handle_asn1(_Req0, _State, {authenticateClientRequestEsipa, EsipaReq}) ->
-	% TODO: Resolve the SM-DP+ URL by the transaction ID from cached values.
-	BaseUrl = <<"testsmdpplus1.example.com">>,
+handle_asn1(Req0, _State, {authenticateClientRequestEsipa, EsipaReq}) ->
+    {_, WorkState} = mnesia_db:work_pickup(maps:get(pid, Req0)),
+    BaseUrl = maps:get(smdpAddress, WorkState),
 
 	% setup ES9+ request message
 	AuthServResp = maps:get(authenticateServerResponse, EsipaReq),
@@ -68,9 +75,9 @@ handle_asn1(_Req0, _State, {authenticateClientRequestEsipa, EsipaReq}) ->
 	{authenticateClientResponseEsipa, EsipaResp};
 
 %GSMA SGP.32, section 6.3.2.3
-handle_asn1(_Req0, _State, {getBoundProfilePackageRequestEsipa, EsipaReq}) ->
-	% TODO: Resolve the SM-DP+ URL by the transaction ID from cached values.
-	BaseUrl = <<"testsmdpplus1.example.com">>,
+handle_asn1(Req0, _State, {getBoundProfilePackageRequestEsipa, EsipaReq}) ->
+    {_, WorkState} = mnesia_db:work_pickup(maps:get(pid, Req0)),
+    BaseUrl = maps:get(smdpAddress, WorkState),
 
 	% setup ES9+ request message
 	PrepDwnldResp = maps:get(prepareDownloadResponse, EsipaReq),
@@ -101,9 +108,9 @@ handle_asn1(_Req0, _State, {getBoundProfilePackageRequestEsipa, EsipaReq}) ->
 	{getBoundProfilePackageResponseEsipa, EsipaResp};
 
 %GSMA SGP.32, section 6.3.2.5
-handle_asn1(_Req0, _State, {cancelSessionRequestEsipa, EsipaReq}) ->
-	% TODO: Resolve the SM-DP+ URL by the transaction ID from cached values.
-	BaseUrl = <<"testsmdpplus1.example.com">>,
+handle_asn1(Req0, _State, {cancelSessionRequestEsipa, EsipaReq}) ->
+    {_, WorkState} = mnesia_db:work_pickup(maps:get(pid, Req0)),
+    BaseUrl = maps:get(smdpAddress, WorkState),
 
 	% setup ES9+ request message
 	CancelSessionReq = maps:get(cancelSessionResponse, EsipaReq),
@@ -125,12 +132,12 @@ handle_asn1(_Req0, _State, {cancelSessionRequestEsipa, EsipaReq}) ->
 	{cancelSessionResponseEsipa, Es9Resp};
 
 %GSMA SGP.32, section 6.3.2.4
-handle_asn1(_Req0, _State, {handleNotificationEsipa, EsipaReq}) ->
+handle_asn1(Req0, _State, {handleNotificationEsipa, EsipaReq}) ->
+    {_, WorkState} = mnesia_db:work_pickup(maps:get(pid, Req0)),
+    BaseUrl = maps:get(smdpAddress, WorkState),
+
 	case EsipaReq of
 		{pendingNotification, PendingNotif} ->
-			% TODO: Here we do not have a transaction ID in all situations, how do we determine the
-			% BaseUrl?
-			BaseUrl = <<"testsmdpplus1.example.com">>,
 
 			% setup ES9+ request message
 			Es9Req = case PendingNotif of
@@ -157,23 +164,37 @@ handle_asn1(_Req0, _State, {handleNotificationEsipa, EsipaReq}) ->
 
 	% There is no response defined for this function (see also SGP.32, section 6.3.2.4), so we send just an empty
 	% response (0 bytes of data)
+
+    ok = mnesia_db:work_finish(maps:get(pid, Req0), success, "TODO"),
+
 	emptyResponse;
 
 %GSMA SGP.32, section 6.3.2.6
-handle_asn1(_Req0, _State, {getEimPackageRequest, EsipaReq}) ->
+handle_asn1(Req0, _State, {getEimPackageRequest, EsipaReq}) ->
 	% TODO: Use the eID as a key to query a database for the ActivationCode (for now we use a hardcoded AC).
 	EidValue = maps:get(eidValue, EsipaReq),
 	io:format("EidValue: ~p~n", [EidValue]),
-	ActivationCode = <<"1$testsmdpplus1.example.com$OPxLD-UVRuC-jysPI-YkOwT">>,
 
 	% TODO: Some state has changed on the eUICC, clarify what kind of data we should request when this happens.
 	NotifStateChg = maps:is_key(notifyStateChange, EsipaReq),
 	io:format("notifyStateChange: ~p~n", [NotifStateChg]),
 
-	% setup ESipa response message
-	% TODO: Besides profileDownloadTriggerRequest, there is also euiccPackageRequest, ipaEuiccDataRequest, and
-	% eimAcknowledgements.
-	EsipaResp = {profileDownloadTriggerRequest, #{profileDownloadData => {activationCode, ActivationCode}}},
+
+    % setup ESipa response message
+    % TODO: Besides profileDownloadTriggerRequest, there is also euiccPackageRequest, ipaEuiccDataRequest, and
+    % eimAcknowledgements.
+    Work = mnesia_db:work_fetch(utils:binary_to_hex(EidValue), maps:get(pid, Req0)),
+    EsipaResp = case Work of
+		    {download, Order} ->
+			{[{<<"activationCode">>, ActivationCode}]} = Order,
+			{profileDownloadTriggerRequest, #{profileDownloadData => {activationCode, ActivationCode}}};
+		    none ->
+			{eimPackageError, noEimPackageAvailable};
+		    _ ->
+			{eimPackageError, undefinedError}
+    end,
+    mnesia_db:work_putdown(maps:get(pid, Req0), #{}),
+
 	{getEimPackageResponse, EsipaResp};
 
 %GSMA SGP.32, section 6.3.2.7

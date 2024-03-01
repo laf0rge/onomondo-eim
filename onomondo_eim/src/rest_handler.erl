@@ -74,10 +74,14 @@ get_rest_lookup(Req, State, Facility) ->
     io:format("retrieving REST resource: ~p:~n", [ResourceId]),
     Result = mnesia_db:rest_lookup(ResourceId, Facility),
     Response = case Result of
-		   {Status, Timestamp, EidValue, Order} ->
-		       Resource = {[ {<<"eidValue">>, EidValue}, {<<"order">>, Order}]},
-		       io_lib:format("{\"status\": \"~p\", \"timestamp\": \"~p\", \"resource\": ~s}",
-				     [Status, Timestamp, binary_to_list(jiffy:encode(Resource))]);
+		   {Status, Timestamp, EidValue, Order, Outcome} ->
+		       % Here a "resource" refers to the parameters that the REST API user has originally submitted
+		       % during create. We will only read from the resource but not alter it.
+		       Resource = {[{<<"eidValue">>, EidValue}, {<<"order">>, Order}]},
+		       io_lib:format("{\"status\": \"~p\", \"timestamp\": \"~p\", \"resource\": ~s, \"outcome\": ~s}",
+				     [Status, Timestamp,
+				      binary_to_list(jiffy:encode(Resource)),
+				      binary_to_list(jiffy:encode(Outcome))]);
 		   none -> "{\"status\": \"absent\"}";
 		   _ -> "{\"status\": \"error\"}"
 	       end,
