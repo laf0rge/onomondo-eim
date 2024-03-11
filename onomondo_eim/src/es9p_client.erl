@@ -5,7 +5,7 @@
 
 -module(es9p_client).
 
--export([request_json/2, request_asn1/2]).
+-export([request_json/2, request_asn1/2, tryme/0]).
 
 % send an ES9+ HTTP request in JSON format over HTTP binding
 make_req_json(BaseUrl, Function, JsonBody) ->
@@ -180,3 +180,30 @@ request_asn1(RemPpr, BaseUrl) ->
 	{ok, _HttpStatus, Asn1Resp} = make_req_asn1(BaseUrl, RemPpr),
 	% TODO: check HTTP status?
 	Asn1Resp.
+
+tryme() ->
+
+    Req = {initiateAuthenticationRequest,#{euiccChallenge =>
+                                     <<98,247,104,103,113,183,83,201,207,31,83,
+                                       25,64,67,206,171>>,
+                                 euiccInfo1 =>
+                                     #{euiccCiPKIdListForSigning =>
+                                           [<<245,65,114,189,249,138,149,214,
+                                              92,190,184,138,56,161,193,29,128,
+                                              10,133,195>>,
+                                            <<192,188,112,186,54,146,157,67,
+                                              180,103,255,87,87,5,48,229,122,
+                                              184,252,216>>],
+                                       euiccCiPKIdListForVerification =>
+                                           [<<245,65,114,189,249,138,149,214,
+                                              92,190,184,138,56,161,193,29,128,
+                                              10,133,195>>,
+                                            <<192,188,112,186,54,146,157,67,
+                                              180,103,255,87,87,5,48,229,122,
+                                              184,252,216>>],
+                                       svn => <<2,3,0>>},
+					   smdpAddress => <<"127.0.0.1">>}},
+
+
+
+    request_json(Req, <<"127.0.0.1:4430">>).
