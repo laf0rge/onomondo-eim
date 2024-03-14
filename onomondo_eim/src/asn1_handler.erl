@@ -169,10 +169,6 @@ handle_asn1(Req0, _State, {handleNotificationEsipa, EsipaReq}) ->
 
 %GSMA SGP.32, section 6.3.2.6
 handle_asn1(Req0, _State, {getEimPackageRequest, EsipaReq}) ->
-    % TODO: Use the eID as a key to query a database for the ActivationCode (for now we use a hardcoded AC).
-    EidValue = maps:get(eidValue, EsipaReq),
-    io:format("EidValue: ~p~n", [EidValue]),
-
     % TODO: Some state has changed on the eUICC, clarify what kind of data we should request when this happens.
     NotifStateChg = maps:is_key(notifyStateChange, EsipaReq),
     io:format("notifyStateChange: ~p~n", [NotifStateChg]),
@@ -180,6 +176,7 @@ handle_asn1(Req0, _State, {getEimPackageRequest, EsipaReq}) ->
     % setup ESipa response message
     % TODO: Besides profileDownloadTriggerRequest, there is also euiccPackageRequest, ipaEuiccDataRequest, and
     % eimAcknowledgements.
+    EidValue = maps:get(eidValue, EsipaReq),
     Work = mnesia_db:work_fetch(utils:binary_to_hex(EidValue), maps:get(pid, Req0)),
     EsipaResp = case Work of
 		    {download, Order} ->
