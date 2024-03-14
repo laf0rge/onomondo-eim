@@ -170,8 +170,7 @@ handle_asn1(Req0, _State, {handleNotificationEsipa, EsipaReq}) ->
 %GSMA SGP.32, section 6.3.2.6
 handle_asn1(Req0, _State, {getEimPackageRequest, EsipaReq}) ->
     % TODO: Some state has changed on the eUICC, clarify what kind of data we should request when this happens.
-    NotifStateChg = maps:is_key(notifyStateChange, EsipaReq),
-    io:format("notifyStateChange: ~p~n", [NotifStateChg]),
+    % NotifStateChg = maps:is_key(notifyStateChange, EsipaReq),
 
     % setup ESipa response message
     % TODO: Besides profileDownloadTriggerRequest, there is also euiccPackageRequest, ipaEuiccDataRequest, and
