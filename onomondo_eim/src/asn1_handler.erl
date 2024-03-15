@@ -129,6 +129,8 @@ handle_asn1(Req0, _State, {cancelSessionRequestEsipa, EsipaReq}) ->
     % setup ESipa response message
     % CancelSessionResponseEsipa and CancelSessionResponseEs9 share the exact same definition, so we may convert
     % without an extra case statement.
+
+    ok = mnesia_db:work_finish(maps:get(pid, Req0), canceled, "TODO:Put cancelSessionResponse here"),
     {cancelSessionResponseEsipa, Es9Resp};
 
 %GSMA SGP.32, section 6.3.2.4
@@ -250,9 +252,9 @@ init(Req0, State) ->
 		  % do the asn1 decode of the request body; dispatch to real handler
 		  {ok, Data, Req1} = cowboy_req:read_body(Req0),
 		  {ok, IpaToEim} = 'SGP32Definitions':decode('EsipaMessageFromIpaToEim', Data),
-		  io:format("Rx ESipa ASN1: ~p~n", [IpaToEim]),
+		  logger:notice("Rx ESipa ASN.1: ~p~n", [IpaToEim]),
 		  EimToIpa = handle_asn1(Req1, State, IpaToEim),
-		  io:format("Tx ESipa ASN1: ~p~n", [EimToIpa]),
+		  logger:notice("Tx ESipa ASN.1: ~p~n", [EimToIpa]),
 		  {ok, EncodedRespBody} = encode_eim_to_ipa(EimToIpa),
 		  cowboy_req:reply(200, ?RESPONSE_HEADERS, EncodedRespBody, Req0);
 	      _ ->

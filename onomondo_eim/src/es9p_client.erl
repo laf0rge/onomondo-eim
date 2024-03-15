@@ -24,14 +24,9 @@ make_req_json(BaseUrl, Function, JsonBody) ->
     % TODO: actually verify the certificate by providing custom root CA Cert
     SslOptions = [ {verify, verify_none} ],
     Options = [ {ssl_options, SslOptions}, with_body ],
-    io:format("Tx ES9+ JSON:~n"),
-    io:format("headers: ~p~n", [ReqHeaders]),
-    io:format("body: ~p~n", [ReqBody]),
+    logger:notice("Tx ES9+ JSON:~nURL=~p~nReqHeaders:~p~nReqBody=~p~n", [URL, ReqHeaders, ReqBody]),
     {ok, StatusCode, RespHeaders, RespBody} = hackney:request(Method, URL, ReqHeaders, ReqBody, Options),
-    io:format("Rx ES9+ JSON:~n"),
-    io:format("status: ~p~n", [StatusCode]),
-    io:format("headers: ~p~n", [RespHeaders]),
-    io:format("body: ~p~n", [RespBody]),
+    logger:notice("Rx ES9+ JSON:~nStatusCode=~p~nRespHeaders=~p~nRespBody=~p~n", [StatusCode, RespHeaders, RespBody]),
     % TODO: verify RespHeaders: X-Admin-Protocol
     % TODO: verify RespHeaders: Content-Type
     RespBodyDecoded = case StatusCode of
@@ -53,14 +48,9 @@ make_req_asn1(BaseUrl, Asn1Body) ->
     % TODO: actually verify the certificate by providing custom root CA Cert
     SslOptions = [ {verify, verify_none} ],
     Options = [ {ssl_options, SslOptions}, with_body ],
-    io:format("Tx ES9+ ASN.1:~n"),
-    io:format("headers: ~p~n", [ReqHeaders]),
-    io:format("body: ~p~n", [ReqBody]),
+    logger:notice("Tx ES9+ ASN.1:~nURL=~p~nReqHeaders=~p~nReqBody=~p~n", [URL, ReqHeaders, ReqBody]),
     {ok, StatusCode, RespHeaders, RespBody} = hackney:request(Method, URL, ReqHeaders, ReqBody, Options),
-    io:format("Rx ES9+ ASN.1:~n"),
-    io:format("status: ~p~n", [StatusCode]),
-    io:format("headers: ~p~n", [RespHeaders]),
-    io:format("body: ~p~n", [RespBody]),
+    logger:notice("Rx ES9+ ASN.1:~nStatusCode=~p~nRespHeaders=~p~nRespBody=~p~n", [StatusCode, RespHeaders, RespBody]),
     % TODO: verify RespHeaders: X-Admin-Protocol
     % TODO: verify RespHeaders: Content-Type
     RespBodyDecoded = case StatusCode of

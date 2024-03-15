@@ -16,7 +16,6 @@
 
 % Initiaize state and extract the operation (create, lookup, update, list)
 init(Req, Options) ->
-    io:format("Incoming REST request: ~p~n", [Options]),
     State = #state{op=Options},
     {cowboy_rest, Req, State}.
 
@@ -55,7 +54,7 @@ handle_get_request(Req, #state{op=Op} = State) ->
 % Create a new resource and return its identifier
 post_rest_create(Req, State, Facility) ->
     {ok, [{Content, true}], Req1} = cowboy_req:read_urlencoded_body(Req),
-    io:format("creating new REST resource: ~p~n", [Content]),
+    logger:notice("REST: creating new REST resource: Resource=~p, Facility=~p~n", [Content, Facility]),
     ContentDecoded = jiffy:decode(Content),
     {[{<<"eidValue">>, EidValue}, _]} = ContentDecoded,
     {[_, {<<"order">>, Order}]} = ContentDecoded,
@@ -63,6 +62,7 @@ post_rest_create(Req, State, Facility) ->
     case cowboy_req:method(Req1) of
         <<"POST">> ->
             Response = io_lib:format("/~s/lookup/~s", [Facility, ResourceId]),
+	    logger:notice("REST: responding to client: ResourceId=~p, Response:~p~n", [ResourceId, list_to_binary(Response)]),
             {{true, list_to_binary(Response)}, Req1, State};
         _ ->
             {true, Req1, State}
@@ -71,7 +71,7 @@ post_rest_create(Req, State, Facility) ->
 % Lookup a specific resource and output it to the requestor
 get_rest_lookup(Req, State, Facility) ->
     ResourceId = binary_to_list((cowboy_req:binding(resource_id, Req))),
-    io:format("retrieving REST resource: ~p:~n", [ResourceId]),
+    logger:notice("REST: client requests REST resource for lookup: ResourceId=~p, Facility=~p~n", [ResourceId, Facility]),
     Result = mnesia_db:rest_lookup(ResourceId, Facility),
     Response = case Result of
 		   {Status, Timestamp, EidValue, Order, Outcome} ->
@@ -85,25 +85,28 @@ get_rest_lookup(Req, State, Facility) ->
 		   none -> "{\"status\": \"absent\"}";
 		   _ -> "{\"status\": \"error\"}"
 	       end,
+    logger:notice("REST: responding to client: ResourceId=~p, Response:~p~n", [ResourceId, list_to_binary(Response)]),
     {list_to_binary(Response), Req, State}.
 
 % Delete a specific resource
 get_rest_delete(Req, State, Facility) ->
     ResourceId = binary_to_list((cowboy_req:binding(resource_id, Req))),
-    io:format("deleting REST resource: ~p:~n", [ResourceId]),
+    logger:notice("REST: client requests REST resource for delete: ResourceId=~p, Facility=~p~n", [ResourceId, Facility]),
     Result = mnesia_db:rest_delete(ResourceId, Facility),
     Response = case Result of
 		   ok -> "{\"status\": \"deleted\"}";
 		   none -> "{\"status\": \"absent\"}";
 		   _ -> "{\"status\": \"error\"}"
 	       end,
+    logger:notice("REST: responding to client: ResourceId=~p, Response:~p~n", [ResourceId, list_to_binary(Response)]),
     {list_to_binary(Response), Req, State}.
 
 % Output a list of all pending resources to the requestor
 get_rest_list(Req, State, Facility) ->
-    io:format("retrieving REST resource list~n"),
+    logger:notice("REST: client requests REST resource list: Facility=~p~n", [Facility]),
     Result = mnesia_db:rest_list(Facility),
     ResourceIdList = [ list_to_binary(X) || X <- Result],
     Response = io_lib:format("{\"resource_id_list\": ~s}",
 			     [binary_to_list(jiffy:encode(ResourceIdList))]),
+    logger:notice("REST: responding to client: Response:~p~n", [list_to_binary(Response)]),
     {list_to_binary(Response), Req, State}.
