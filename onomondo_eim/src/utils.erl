@@ -36,7 +36,7 @@ hexstr_octet_to_int(HexOctet) ->
 
 % Converts a binary into a printable hex-string (also a binary).
 binary_to_hex(Binary) ->
-    EncList = [io_lib:format("~2.16.0b",[X]) || <<X:8>> <= Binary ],
+    EncList = [io_lib:format("~2.16.0B",[X]) || <<X:8>> <= Binary ],
     list_to_binary(string:join(io_lib:format("~s", [EncList]), "")).
 
 % Converts a printable hex-string (int the form of a binary) to a binary.
