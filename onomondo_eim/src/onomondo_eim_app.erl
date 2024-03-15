@@ -19,7 +19,7 @@ start(_Type, _Args) ->
                {"/gsma/rsp2/esipa/handleNotification", handleNotification_handler, []},
                {"/gsma/rsp2/esipa/cancelSession", cancelSession_handler, []},
                % SGP.32 Section 6.1.1: Any function execution request using ASN.1 binding SHALL be sent to the generic HTTP path 'gsma/rsp2/asn1'
-               {"/gsma/rsp2/asn1", asn1_handler, []}
+               {"/gsma/rsp2/asn1", esipa_handler, []}
               ]}
     ]),
     {ok, _} = cowboy:start_clear(http_listener_esipa,

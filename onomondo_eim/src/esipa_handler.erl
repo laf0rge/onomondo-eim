@@ -1,7 +1,7 @@
 % Author: Harald Welte <hwelte@sysmocom.de> / sysmocom - s.f.m.c. GmbH
 % Author: Philipp Maier <pmaier@sysmocom.de> / sysmocom - s.f.m.c. GmbH
 
--module(asn1_handler).
+-module(esipa_handler).
 -behavior(cowboy_handler).
 
 -export([init/2]).
