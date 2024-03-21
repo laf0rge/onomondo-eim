@@ -7,6 +7,8 @@
 -export([stop/1]).
 
 start(_Type, _Args) ->
+    logger:notice("eIM!"),
+
     Dispatch_ESipa = cowboy_router:compile([
         {'_', [
 	       % SGP.32 Section 6.4.1
