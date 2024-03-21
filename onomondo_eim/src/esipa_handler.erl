@@ -204,7 +204,8 @@ handle_asn1(Req0, _State, {getEimPackageRequest, EsipaReq}) ->
 
 			% Format Esipa message
 			EuiccPackage = {psmoList, PsmoList},
-			EuiccPackageSigned = #{eimId => <<"myEIM">>, %TODO: from where do we get this id?
+			{ok, EimId} = application:get_env(onomondo_eim, eim_id),
+			EuiccPackageSigned = #{eimId => list_to_binary(EimId),
 					       eidValue => EidValue,
 					       counterValue => 0, % TODO: pick a suitable value (how?)
 					       transactionId => <<1,2,3,4>>, %TODO: generate a random transaction id (and store it?)
