@@ -17,7 +17,7 @@ def h2b(s) -> bytearray:
 
 def rest_create(host, facility, Json):
     r = requests.post("http://" + str(host) + "/" + str(facility) + "/create", json=Json)
-    return "resource URL: " + str(r.url)
+    return str(r.url)
 
 def rest_lookup(host, facility, ResourceId):
     r = requests.get("http://" + str(host) + "/" + str(facility) + "/lookup/" + str(ResourceId))
@@ -45,8 +45,8 @@ def main(argv):
     args = parser.parse_args()
 
     if args.create:
-        print("create on: " + str(args.host))
-        print(" facility: " + str(args.facility))
+        print("create on: " + str(args.host), file=sys.stderr)
+        print(" facility: " + str(args.facility), file=sys.stderr)
         if args.json:
             args_json = str(args.json)
         else:
@@ -54,34 +54,33 @@ def main(argv):
                 args_json = DOWNLOAD_DEFAULT
             elif args.facility == "psmo":
                 args_json = PSMO_DEFAULT
-        print(" json: " + args_json)
-        print("result:")
+        print(" json: " + args_json, file=sys.stderr)
+        print("result:", file=sys.stderr)
         print(rest_create(args.host, args.facility, json.loads(args_json)))
     elif args.lookup:
-        print("lookup on: " + str(args.host))
-        print(" facility: " + str(args.facility))
-        print(" resourceId: " + str(args.resource_id))
+        print("lookup on: " + str(args.host), file=sys.stderr)
+        print(" facility: " + str(args.facility), file=sys.stderr)
+        print(" resourceId: " + str(args.resource_id), file=sys.stderr)
         result = rest_lookup(args.host, args.facility, args.resource_id)
-        print("json-result:" + str(result))
-        outcome_hexstr=result['outcome']
-        outcome_bytes=h2b(outcome_hexstr)
-        outcome_term=erlang.binary_to_term(outcome_bytes)
-        pp = pprint.PrettyPrinter(depth=4)
-        outcome_pretty = pp.pformat(outcome_term)
-        print("decoded outcome: " + str(outcome_pretty))
+        print(str(result))
+        if 'outcome' in result:
+            outcome_hexstr=result['outcome']
+            outcome_bytes=h2b(outcome_hexstr)
+            outcome_term=erlang.binary_to_term(outcome_bytes)
+            pp = pprint.PrettyPrinter(depth=4)
+            outcome_pretty = pp.pformat(outcome_term)
+            print("decoded outcome: " + str(outcome_pretty), file=sys.stderr)
     elif args.delete:
-        print("delete on: " + str(args.host))
-        print(" facility: " + str(args.facility))
-        print(" resourceId: " + str(args.resource_id))
-        print("result:")
+        print("delete on: " + str(args.host), file=sys.stderr)
+        print(" facility: " + str(args.facility), file=sys.stderr)
+        print(" resourceId: " + str(args.resource_id), file=sys.stderr)
+        print("result:", file=sys.stderr)
         print(rest_delete(args.host, args.facility, args.resource_id))
     elif args.list:
-        print("list on: " + str(args.host))
-        print(" facility: " + str(args.facility))
-        print("result:")
-        print(rest_list(args.host, args.facility))
-
-
+        print("list on: " + str(args.host), file=sys.stderr)
+        print(" facility: " + str(args.facility), file=sys.stderr)
+        print("result:", file=sys.stderr)
+        print(rest_list(args.host, args.facility), file=sys.stderr)
 
 if __name__ == "__main__":
     main(sys.argv[1:])
