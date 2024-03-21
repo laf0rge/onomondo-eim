@@ -12,6 +12,7 @@ start(_Type, _Args) ->
     % Startup database
     ok = mnesia_db:init(),
 
+    % Startup ESipa server
     Dispatch_ESipa = cowboy_router:compile([
         {'_', [
 	       % SGP.32 Section 6.4.1
@@ -35,6 +36,7 @@ start(_Type, _Args) ->
 					    middlewares => [cowboy_router, eim_esipa_middleware, cowboy_handler]}}
 				),
 
+    % Startup REST server
     Dispatch_REST = cowboy_router:compile([
         {'_', [
                % Downloads
