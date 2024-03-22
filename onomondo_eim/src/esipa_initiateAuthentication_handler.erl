@@ -1,4 +1,4 @@
--module(getBoundProfilePackage_handler).
+-module(esipa_initiateAuthentication_handler).
 -behavior(cowboy_handler).
 
 -export([init/2]).

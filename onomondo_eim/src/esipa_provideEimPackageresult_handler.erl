@@ -1,4 +1,4 @@
--module(getEimPackage_handler).
+-module(esipa_provideEimPackageresult_handler).
 -behavior(cowboy_handler).
 
 -export([init/2]).

@@ -1,4 +1,4 @@
--module(authenticateClient_handler).
+-module(esipa_authenticateClient_handler).
 -behavior(cowboy_handler).
 
 -export([init/2]).

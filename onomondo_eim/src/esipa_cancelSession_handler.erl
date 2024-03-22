@@ -1,4 +1,4 @@
--module(handleNotification_handler).
+-module(esipa_cancelSession_handler).
 -behavior(cowboy_handler).
 
 -export([init/2]).

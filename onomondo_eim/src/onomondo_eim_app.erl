@@ -16,16 +16,16 @@ start(_Type, _Args) ->
     Dispatch_ESipa = cowboy_router:compile([
         {'_', [
 	       % SGP.32 Section 6.4.1
-	       {"/gsma/rsp2/esipa/initiateAuthentication", initiateAuthentication_handler, []},
-	       {"/gsma/rsp2/esipa/authenticateClient", authenticateClient_handler, []},
-	       {"/gsma/rsp2/esipa/getBoundProfilePackage", getBoundProfilePackage_handler, []},
-               {"/gsma/rsp2/esipa/transferEimPackage", transferEimPackage_handler, []},
-               {"/gsma/rsp2/esipa/getEimPackage", getEimPackage_handler, []},
-               {"/gsma/rsp2/esipa/provideEimPackageResult", provideEimPackageresult_handler, []},
-               {"/gsma/rsp2/esipa/handleNotification", handleNotification_handler, []},
-               {"/gsma/rsp2/esipa/cancelSession", cancelSession_handler, []},
+	       {"/gsma/rsp2/esipa/initiateAuthentication", esipa_initiateAuthentication_handler, []},
+	       {"/gsma/rsp2/esipa/authenticateClient", esipa_authenticateClient_handler, []},
+	       {"/gsma/rsp2/esipa/getBoundProfilePackage", esipa_getBoundProfilePackage_handler, []},
+               {"/gsma/rsp2/esipa/transferEimPackage", esipa_transferEimPackage_handler, []},
+               {"/gsma/rsp2/esipa/getEimPackage", esipa_getEimPackage_handler, []},
+               {"/gsma/rsp2/esipa/provideEimPackageResult", esipa_provideEimPackageresult_handler, []},
+               {"/gsma/rsp2/esipa/handleNotification", esipa_handleNotification_handler, []},
+               {"/gsma/rsp2/esipa/cancelSession", esipa_cancelSession_handler, []},
                % SGP.32 Section 6.1.1: Any function execution request using ASN.1 binding SHALL be sent to the generic HTTP path 'gsma/rsp2/asn1'
-               {"/gsma/rsp2/asn1", esipa_handler, []}
+               {"/gsma/rsp2/asn1", esipa_asn_handler, []}
               ]}
     ]),
     {ok, EsipaIp} = application:get_env(onomondo_eim, esipa_ip),
@@ -40,7 +40,7 @@ start(_Type, _Args) ->
 					 [{ip, EsipaIp},
 					  {port, EsipaPort}],
 					 #{env => #{dispatch => Dispatch_ESipa,
-						    middlewares => [cowboy_router, eim_esipa_middleware, cowboy_handler]}}
+						    middlewares => [cowboy_router, esipa_middleware, cowboy_handler]}}
 					);
 	_ ->
 	    logger:notice("Starting ESipa HTTPs server at ~p:~p...~ncertificate: ~p~nkey: ~p",
@@ -51,7 +51,7 @@ start(_Type, _Args) ->
 					{certfile, EsipaSslCert},
 					{keyfile, EsipaSslKey}],
 				       #{env => #{dispatch => Dispatch_ESipa,
-						  middlewares => [cowboy_router, eim_esipa_middleware, cowboy_handler]}}
+						  middlewares => [cowboy_router, esipa_middleware, cowboy_handler]}}
 				      )
     end,
 

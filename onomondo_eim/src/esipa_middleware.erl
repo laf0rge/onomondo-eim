@@ -1,4 +1,4 @@
--module (eim_esipa_middleware).
+-module (esipa_middleware).
 -behaviour(cowboy_middleware).
 
 -export([execute/2]).
