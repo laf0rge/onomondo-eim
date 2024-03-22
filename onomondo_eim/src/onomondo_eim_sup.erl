@@ -1,3 +1,5 @@
+% Author: Harald Welte <hwelte@sysmocom.de> / sysmocom - s.f.m.c. GmbH
+
 -module(onomondo_eim_sup).
 -behaviour(supervisor).
 

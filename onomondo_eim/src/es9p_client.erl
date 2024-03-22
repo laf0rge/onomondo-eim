@@ -1,3 +1,6 @@
+% Author: Harald Welte <hwelte@sysmocom.de> / sysmocom - s.f.m.c. GmbH
+% Author: Philipp Maier <pmaier@sysmocom.de> / sysmocom - s.f.m.c. GmbH
+%
 % Implementation of the SGP.22 ES9+ Interface Client
 %
 % Applications are expected to make use of the high-level request_{json,asn1} functions in order to make ES9+
