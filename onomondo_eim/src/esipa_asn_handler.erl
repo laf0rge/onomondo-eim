@@ -6,8 +6,8 @@
 
 -export([init/2]).
 
--define(RESPONSE_HEADERS, #{<<"Content-Type">> => <<"application/x-gsma-rsp-asn1">>,
-			    <<"X-Admin-Protocol">> => <<"gsma/rsp/v2.1.0">>}).
+-define(RESPONSE_HEADERS, #{<<"content-type">> => <<"application/x-gsma-rsp-asn1">>,
+			    <<"x-admin-protocol">> => <<"gsma/rsp/v2.1.0">>}).
 
 %GSMA SGP.32, section 6.3.2.1
 handle_asn1(Req0, _State, {initiateAuthenticationRequestEsipa, EsipaReq}) ->
