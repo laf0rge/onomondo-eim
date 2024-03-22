@@ -47,7 +47,9 @@ handle_get_request(Req, #state{op=Op} = State) ->
 			       [Facility, delete] ->
 				   get_rest_delete(Req, State, Facility);
 			       [Facility, list] ->
-				   get_rest_list(Req, State, Facility)
+				   get_rest_list(Req, State, Facility);
+			       [info] ->
+				   get_rest_info(Req, State)
 			   end,
     {Body, Req1, State1}.
 
@@ -108,5 +110,27 @@ get_rest_list(Req, State, Facility) ->
     ResourceIdList = [ list_to_binary(X) || X <- Result],
     Response = io_lib:format("{\"resource_id_list\": ~s}",
 			     [binary_to_list(jiffy:encode(ResourceIdList))]),
+    logger:notice("REST: responding to client: Response:~p~n", [list_to_binary(Response)]),
+    {list_to_binary(Response), Req, State}.
+
+% Output a list with basic information about the eIM instance to the requestor
+get_rest_info(Req, State) ->
+    logger:notice("REST: client requests info~n"),
+    {ok, EimId} = application:get_env(onomondo_eim, eim_id),
+    {ok, EsipaIp} = application:get_env(onomondo_eim, esipa_ip),
+    {ok, EsipaPort} = application:get_env(onomondo_eim, esipa_port),
+    {ok, Hostname} = inet:gethostname(),
+    {ok, Vsn} = application:get_key(onomondo_eim, vsn),
+    InfoList = {[
+		  {hostname, list_to_binary(Hostname)},
+		  {node, node()},
+		  {vsn, list_to_binary(Vsn)},
+		  {eim_id, list_to_binary(EimId)},
+		  {esipa_ip, list_to_binary(inet:ntoa(EsipaIp))},
+		  {esipa_port, EsipaPort},
+		  {eim_configuration_data, eim_cfg:gen_eim_configuration_data()}
+		]},
+    Response = io_lib:format("{\"resource_id_list\": ~s}",
+			     [binary_to_list(jiffy:encode(InfoList))]),
     logger:notice("REST: responding to client: Response:~p~n", [list_to_binary(Response)]),
     {list_to_binary(Response), Req, State}.

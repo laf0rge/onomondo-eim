@@ -72,7 +72,9 @@ start(_Type, _Args) ->
                {"/eco/create/", rest_handler, [eco, create]},
                {"/eco/lookup/:resource_id", rest_handler, [eco, lookup]},
                {"/eco/delete/:resource_id", rest_handler, [eco, delete]},
-               {"/eco/list/", rest_handler, [eco, list]}
+               {"/eco/list/", rest_handler, [eco, list]},
+	       % MISC
+               {"/", rest_handler, [info]}
               ]}
     ]),
     {ok, RestIp} = application:get_env(onomondo_eim, rest_ip),

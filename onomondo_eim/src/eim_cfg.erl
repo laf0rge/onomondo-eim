@@ -3,9 +3,9 @@
 
 -module(eim_cfg).
 
--export([get_eim_cfg/0]).
+-export([gen_eim_configuration_data/0]).
 
-get_eim_cfg() ->
+gen_eim_configuration_data() ->
     {ok, EimId} = application:get_env(onomondo_eim, eim_id),
     {ok, EsipaIp} = application:get_env(onomondo_eim, esipa_ip),
     {ok, EsipaPort} = application:get_env(onomondo_eim, esipa_port),
