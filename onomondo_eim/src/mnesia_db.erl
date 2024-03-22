@@ -194,13 +194,13 @@ work_fetch(EidValue, Pid) ->
     {atomic , Result} = mnesia:transaction(Trans),
     case Result of
 	{rest, _, Facility, _, Order, _, _, _} ->
-	    logger:notice("Work: fetching new work item: EidValue=~p, Pid=~p, Order=~p, Facility=~p~n", [EidValue, Pid, Order, Facility]),
+	    logger:notice("Work: fetching new work item: EidValue=~p, Pid=~p, Order=~p, Facility=~p", [EidValue, Pid, Order, Facility]),
 	    {Facility, Order};
 	none ->
-	    logger:notice("Work: no work item in database: EidValue=~p, Pid=~p~n", [EidValue, Pid]),
+	    logger:notice("Work: no work item in database: EidValue=~p, Pid=~p", [EidValue, Pid]),
 	    none;
 	_ ->
-	    logger:error("Work: cannot fetch work item, database error: EidValue=~p, Pid=~p~n", [EidValue, Pid]),
+	    logger:error("Work: cannot fetch work item, database error: EidValue=~p, Pid=~p", [EidValue, Pid]),
 	    error
 	end.
 
@@ -215,10 +215,10 @@ work_pickup(Pid) ->
 	[{Order, State} | _] ->
 	    {Order, State};
 	[] ->
-	    logger:error("Work: no work item found under specified Pid, already finished?, not fetched?: Pid=~p~n", [Pid]),
+	    logger:error("Work: no work item found under specified Pid, already finished?, not fetched?: Pid=~p", [Pid]),
 	    none;
 	_ ->
-	    logger:error("Work: cannot pick up work item, database error: Pid=~p~n", [Pid]),
+	    logger:error("Work: cannot pick up work item, database error: Pid=~p", [Pid]),
 	    error
     end.
 
@@ -240,10 +240,10 @@ work_putdown(Pid, State) ->
     {atomic , Result} = mnesia:transaction(Trans),
     case Result of
         ok ->
-	    logger:notice("Work: putting down work item: Pid=~p, State=~p~n", [Pid, State]),
+	    logger:notice("Work: putting down work item: Pid=~p, State=~p", [Pid, State]),
 	    ok;
 	_ ->
-	    logger:error("Work: cannot put work item down, database error: Pid=~p, State=~p~n", [Pid, State]),
+	    logger:error("Work: cannot put work item down, database error: Pid=~p, State=~p", [Pid, State]),
 	    error
 	end.
 
@@ -266,10 +266,10 @@ work_finish(Pid, Status, Outcome) ->
     {atomic, Result} = mnesia:transaction(Trans),
     case Result of
         ok ->
-	    logger:notice("Work: finishing work item: Pid=~p, Status=~p, Outcome=~p~n", [Pid, Status, Outcome]),
+	    logger:notice("Work: finishing work item: Pid=~p, Status=~p, Outcome=~p", [Pid, Status, Outcome]),
 	    ok;
 	_ ->
-	    logger:error("Work: cannot finish work item, database error: Pid=~p, Status=~p, Outcome=~p~n", [Pid, Status, Outcome]),
+	    logger:error("Work: cannot finish work item, database error: Pid=~p, Status=~p, Outcome=~p", [Pid, Status, Outcome]),
 	    error
 	end.
 

@@ -258,9 +258,9 @@ init(Req0, State) ->
 		  % do the asn1 decode of the request body; dispatch to real handler
 		  {ok, Data, Req1} = cowboy_req:read_body(Req0),
 		  {ok, IpaToEim} = 'SGP32Definitions':decode('EsipaMessageFromIpaToEim', Data),
-		  logger:notice("Rx ESipa ASN.1: ~p~n", [IpaToEim]),
+		  logger:notice("Rx ESipa ASN.1: ~p", [IpaToEim]),
 		  EimToIpa = handle_asn1(Req1, State, IpaToEim),
-		  logger:notice("Tx ESipa ASN.1: ~p~n", [EimToIpa]),
+		  logger:notice("Tx ESipa ASN.1: ~p", [EimToIpa]),
 		  {ok, EncodedRespBody} = encode_eim_to_ipa(EimToIpa),
 		  cowboy_req:reply(200, ?RESPONSE_HEADERS, EncodedRespBody, Req0);
 	      _ ->
