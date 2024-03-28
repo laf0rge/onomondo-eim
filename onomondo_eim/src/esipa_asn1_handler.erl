@@ -29,6 +29,8 @@ handle_asn1(Req0, _State, {initiateAuthenticationRequestEsipa, EsipaReq}) ->
     % setup ESipa response message
     EsipaResp = case Es9Resp of
 		    {initiateAuthenticationOk, InitAuthOk} ->
+			TransactionId = maps:get(transactionId, InitAuthOk),
+			io:format("====TransactionId===>~p~n", [TransactionId]),
                         % TODO: InitiateAuthenticationOkEsipa has matchingId and ctxPrams1 as optional members. In case
                         % we are able to populate those fields from cached values, we should do so.
                         % maps:merge(InitAuthOk, #{matchingId => FIXME, ctxPrams1 => FIXME}),
@@ -47,10 +49,14 @@ handle_asn1(Req0, _State, {authenticateClientRequestEsipa, EsipaReq}) ->
     AuthServResp = maps:get(authenticateServerResponse, EsipaReq),
     Es9Req = case AuthServResp of
 		 {authenticateResponseOk, AuthRespOk} ->
+		     TransactionId = maps:get(transactionId, EsipaReq),
+		     io:format("====TransactionId===>~p~n", [TransactionId]),
 		     {authenticateClientRequest,
 		      #{transactionId => maps:get(transactionId, EsipaReq),
 			authenticateServerResponse => {authenticateResponseOk, AuthRespOk}}};
 		 {authenticateResponseError, AuthRespErr} ->
+		     TransactionId = maps:get(transactionId, EsipaReq),
+		     io:format("====TransactionId===>~p~n", [TransactionId]),
 		     {authenticateClientRequest,
 		      #{transactionId => maps:get(transactionId, EsipaReq),
 			authenticateServerResponse => {authenticateResponseError, AuthRespErr}}};
@@ -79,10 +85,14 @@ handle_asn1(Req0, _State, {getBoundProfilePackageRequestEsipa, EsipaReq}) ->
     PrepDwnldResp = maps:get(prepareDownloadResponse, EsipaReq),
     Es9Req = case PrepDwnldResp of
 		 {downloadResponseOk, DwnldRespOk} ->
+		     TransactionId = maps:get(transactionId, EsipaReq),
+		     io:format("====TransactionId===>~p~n", [TransactionId]),
 		     {getBoundProfilePackageRequest,
 		      #{transactionId => maps:get(transactionId, EsipaReq),
 			prepareDownloadResponse => {downloadResponseOk, DwnldRespOk}}};
 		 {downloadResponseError, DwnldRespErr} ->
+		     TransactionId = maps:get(transactionId, EsipaReq),
+		     io:format("====TransactionId===>~p~n", [TransactionId]),
 		     {getBoundProfilePackageRequest,
 		      #{transactionId => maps:get(transactionId, EsipaReq),
 			prepareDownloadResponse => {downloadResponseError, DwnldRespErr}}};
@@ -112,10 +122,14 @@ handle_asn1(Req0, _State, {cancelSessionRequestEsipa, EsipaReq}) ->
     CancelSessionReq = maps:get(cancelSessionResponse, EsipaReq),
     Es9Req = case CancelSessionReq of
 		 {cancelSessionResponseOk, CancelSessionRespOk} ->
+		     TransactionId = maps:get(transactionId, EsipaReq),
+		     io:format("====TransactionId===>~p~n", [TransactionId]),
 		     {cancelSessionRequestEs9,
 		      #{transactionId => maps:get(transactionId, EsipaReq),
 			cancelSessionResponse => {cancelSessionResponseOk, CancelSessionRespOk}}};
 		 {cancelSessionResponseError, CancelSessionRespErr} ->
+		     TransactionId = maps:get(transactionId, EsipaReq),
+		     io:format("====TransactionId===>~p~n", [TransactionId]),
 		     {cancelSessionRequestEs9,
 		      #{transactionId => maps:get(transactionId, EsipaReq),
 			cancelSessionResponse => {cancelSessionResponseError, CancelSessionRespErr}}};
@@ -146,8 +160,14 @@ handle_asn1(Req0, _State, {handleNotificationEsipa, EsipaReq}) ->
 			 {profileInstallationResult, PrfleInstRslt} ->
 			     % SGP32-ProfileInstallationResult and ProfileInstallationResult share the
 			     % exact same definition, so we may convert without an extra case statement.
+			     PrfleInstRsltData = maps:get(profileInstallationResultData, PrfleInstRslt),
+			     TransactionId = maps:get(transactionId, PrfleInstRsltData),
+			     io:format("====TransactionId===>~p~n", [TransactionId]),
 			     {handleNotification, #{pendingNotification => {profileInstallationResult, PrfleInstRslt}}};
 			 {otherSignedNotification, OtherSignNotif} ->
+			     % TODO: An otherSignedNotification does not contain a TransactionId. However it contains
+			     % an SMDP+ OID. Maybe we can at least use this OID to lookup the BaseUrl. In any case we
+			     % won't be able to lookup a specific WorkState here. (do we even need it in this case?)
 			     {handleNotification, #{pendingNotification => {otherSignedNotification, OtherSignNotif}}};
 			 {compactProfileInstallationResult, _CompactPrfleInstRslt} ->
 			     throw("IPA Capability \"minimizeEsipaBytes\" (optional) not supported by this eIM");
@@ -177,6 +197,9 @@ handle_asn1(Req0, _State, {getEimPackageRequest, EsipaReq}) ->
     % setup ESipa response message
     % TODO: Besides profileDownloadTriggerRequest, there is also euiccPackageRequest, ipaEuiccDataRequest, and
     % eimAcknowledgements.
+
+    % TODO: We won't get a TransactionId here yet (except for eUICC packages where we must generate it ourselves).
+    % The first time we see a TransactionId is in the SMDP+ response to the initiateAuthenticationRequest
     EidValue = maps:get(eidValue, EsipaReq),
     Work = mnesia_db:work_fetch(utils:binary_to_hex(EidValue), maps:get(pid, Req0)),
     EsipaResp = case Work of
@@ -224,6 +247,9 @@ handle_asn1(Req0, _State, {provideEimPackageResult, EsipaReq}) ->
     % TODO: Evaluate the contents of the EimPackageResult. This result may contain either results intended for the eIM
     % only, but it also may contain results/notifications intended to be forwarded to the SMDP+. We may forward those
     % results/notification to the SMDP+ in a similar way like we already do it in handleNotificationEsipa.
+    % TODO: Depending on the contents in provideEimPackageResult we will conditionally know the TransactionId. This
+    % resumbably is the case for notifications belonging to some kind of transactions. Otherwise we may have an OID
+    % of the SMDP+, which we may use to determine the BaseUrl.
     ok = mnesia_db:work_finish(maps:get(pid, Req0), success, EsipaReq),
     {provideEimPackageResultResponse, undefined};
 
