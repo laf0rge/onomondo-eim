@@ -247,7 +247,7 @@ work_update(Pid, State) ->
 	_ ->
 	    logger:error("Work: cannot update, database error: Pid=~p, State=~p", [Pid, State]),
 	    error
-	end.
+    end.
 
 % Finish an order that has been worked on. This removes the related entry from the work table and sets the status in
 % the rest table to "done".
