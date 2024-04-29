@@ -10,12 +10,22 @@
 
 -export([request_json/2, request_asn1/2, tryme/0]).
 
+% Depending on whether SSL is enabled or disabled we get a different HTTP prefix.
+make_http_prefix() ->
+    {ok, Es9pSslDisable} = application:get_env(onomondo_eim, es9p_ssl_disable),
+    case Es9pSslDisable of
+	true ->
+	    "http://";
+	_ ->
+	    "https://"
+    end.
+
 % send an ES9+ HTTP request in JSON format over HTTP binding
 make_req_json(BaseUrl, Function, JsonBody) ->
     % see SGP.22 Section 6.5 for details on HTTP Function Binding in JSON
     Method = post,
     % construct URL from global hostname, static path and function
-    URL = list_to_binary(string:join(["https://", binary_to_list(BaseUrl), "/gsma/rsp2/es9plus/", Function], "")),
+    URL = list_to_binary(string:join([make_http_prefix(), binary_to_list(BaseUrl), "/gsma/rsp2/es9plus/", Function], "")),
     ReqHeaders = [ {<<"Content-Type">>, <<"application/json;charset=UTF-8">>},
 		   {<<"X-Admin-Protocol">>, <<"gsma/rsp/v2.1.0">>} ],
     % Add a request header (see also: GSMA SGP.22 6.5.1.3)
@@ -43,7 +53,7 @@ make_req_asn1(BaseUrl, Asn1Body) ->
     % see SGP.22 Section 6.6 for details on HTTP Function Binding in ASN.1
     Method = post,
     % construct URL from global hostname, static path and function
-    URL = list_to_binary(string:join(["https://", binary_to_list(BaseUrl), "/gsma/rsp2/asn1"], "")),
+    URL = list_to_binary(string:join([make_http_prefix(), binary_to_list(BaseUrl), "/gsma/rsp2/asn1"], "")),
     ReqHeaders = [ {<<"Content-Type">>, <<"application/x-gsma-rsp-asn1">>},
 		   {<<"X-Admin-Protocol">>, <<"gsma/rsp/v2.1.0">>} ],
     % construct body from encoded ASN.1

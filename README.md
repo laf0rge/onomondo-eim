@@ -46,6 +46,8 @@ cases those parameters do not have to be modified.
 * rest_ip: Configure on which network interface the REST API interface should listen.
 * rest_port: Configure the port number where the REST API interface should listen.
 * eim_id: Configure the eimId of the eIM instance.
+* es9p_ssl_disable: Set this to true to use HTTP instead of HTTPs. This is a debug feature intended for lab setups to
+  simplify the creation of protocol traces.
 
 ### vm.args
 
