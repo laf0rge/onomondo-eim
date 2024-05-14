@@ -62,7 +62,7 @@ def main(argv):
         print(" facility: " + str(args.facility), file=sys.stderr)
         print(" resourceId: " + str(args.resource_id), file=sys.stderr)
         result = rest_lookup(args.host, args.facility, args.resource_id)
-        print(str(result))
+        print(json.dumps(result))
         if 'outcome' in result:
             outcome_hexstr=result['outcome']
             outcome_bytes=h2b(outcome_hexstr)
@@ -75,12 +75,12 @@ def main(argv):
         print(" facility: " + str(args.facility), file=sys.stderr)
         print(" resourceId: " + str(args.resource_id), file=sys.stderr)
         print("result:", file=sys.stderr)
-        print(rest_delete(args.host, args.facility, args.resource_id))
+        print(json.dumps(rest_delete(args.host, args.facility, args.resource_id)))
     elif args.list:
         print("list on: " + str(args.host), file=sys.stderr)
         print(" facility: " + str(args.facility), file=sys.stderr)
         print("result:", file=sys.stderr)
-        print(rest_list(args.host, args.facility), file=sys.stderr)
+        print(json.dumps(rest_list(args.host, args.facility), file=sys.stderr))
 
 if __name__ == "__main__":
     main(sys.argv[1:])
