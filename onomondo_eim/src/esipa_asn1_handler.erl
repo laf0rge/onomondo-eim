@@ -194,26 +194,28 @@ handle_asn1(Req0, _State, {getEimPackageRequest, EsipaReq}) ->
     Work = mnesia_db:work_fetch(utils:binary_to_hex(EidValue), maps:get(pid, Req0)),
     EsipaResp = case Work of
 		    {download, Order} ->
-			{[{<<"activationCode">>, ActivationCode}]} = Order,
+			{[{<<"download">>, {[{<<"activationCode">>, ActivationCode}]}}]} = Order,
+			%{[{<<"activationCode">>, ActivationCode}]} = Order,
 			{profileDownloadTriggerRequest, #{profileDownloadData => {activationCode, ActivationCode}}};
 		    {psmo, Order} ->
                         % Convert Order to PSMO list
+			{[{<<"psmo">>, PsmoOrderList}]} = Order,
 			Order2Psmo = fun(PsmoOrder) ->
 					     case PsmoOrder of
-						 {[{<<"psmo">>,<<"enable">>},{<<"iccid">>,Iccid},{<<"rollback">>, true}]} ->
+						 {[{<<"enable">>, {[{<<"iccid">>,Iccid}, {<<"rollback">>,true}]}}]} ->
 						     {enable, #{iccid => utils:hex_to_binary(Iccid), rollbackFlag => null}};
-						 {[{<<"psmo">>,<<"enable">>},{<<"iccid">>,Iccid},{<<"rollback">>, false}]} ->
+						 {[{<<"enable">>, {[{<<"iccid">>,Iccid}, {<<"rollback">>,false}]}}]} ->
 						     {enable, #{iccid => utils:hex_to_binary(Iccid)}};
-						 {[{<<"psmo">>,<<"disable">>},{<<"iccid">>,Iccid}]} ->
+						 {[{<<"disable">>, {[{<<"iccid">>,Iccid}]}}]} ->
 						     {disable, #{iccid => utils:hex_to_binary(Iccid)}};
-						 {[{<<"psmo">>,<<"delete">>},{<<"iccid">>,Iccid}]} ->
+						 {[{<<"delete">>, {[{<<"iccid">>,Iccid}]}}]} ->
 						     {delete, #{iccid => utils:hex_to_binary(Iccid)}}
 						 % TODO: when nothing matches, we get a crash report and nothing else
 						 % happens. We should instead ensure that an undefinedError is returned
 						 % to the ipad and the work is finished with a failure status.
 					     end
 				     end,
-			PsmoList = [Order2Psmo(O) || O <- Order ],
+			PsmoList = [Order2Psmo(O) || O <- PsmoOrderList ],
 
 			% Format Esipa message
 			EuiccPackage = {psmoList, PsmoList},

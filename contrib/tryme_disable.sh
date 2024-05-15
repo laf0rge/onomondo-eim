@@ -1,7 +1,7 @@
 #!/bin/bash
 . ./tryme.cfg
 
-JSON='{ "eidValue" : "'$EID'", "psmo_order" : [{"psmo" : "disable", "iccid" : "'$ICCID'"}]}'
+JSON='{ "eidValue" : "'$EID'", "order" : { "psmo" : [ { "disable" : { "iccid" : "'$ICCID'" } } ] } }'
 RC=`./restop.py -c -f psmo -j "$JSON"`
 echo $RC
 
@@ -13,4 +13,3 @@ while true; do
     ./restop.py -l -f psmo -r $RESOURCE_ID
     sleep 5
 done
-
