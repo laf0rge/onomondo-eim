@@ -188,7 +188,7 @@ handle_asn1(Req0, _State, {getEimPackageRequest, EsipaReq}) ->
     % TODO: Besides profileDownloadTriggerRequest, there is also euiccPackageRequest, ipaEuiccDataRequest, and
     % eimAcknowledgements.
 
-    % TODO: We won't get a TransactionId here yet (except for eUICC packages where we must generate it ourselves).
+    % We won't get a TransactionId here yet (except for eUICC packages where we must generate it ourselves).
     % The first time we see a TransactionId is in the SMDP+ response to the initiateAuthenticationRequest
     EidValue = maps:get(eidValue, EsipaReq),
     Work = mnesia_db:work_fetch(utils:binary_to_hex(EidValue), maps:get(pid, Req0)),
