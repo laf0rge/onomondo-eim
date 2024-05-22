@@ -9,18 +9,33 @@ gen_eim_configuration_data(Style) ->
     {ok, EimId} = application:get_env(onomondo_eim, eim_id),
     {ok, EsipaIp} = application:get_env(onomondo_eim, esipa_ip),
     {ok, EsipaPort} = application:get_env(onomondo_eim, esipa_port),
-    {ok, EsipaSslCertPath} = application:get_env(onomondo_eim, esipa_ssl_cert),
-    {ok, EsipaSslCertPem} = file:read_file(EsipaSslCertPath),
-    [{'Certificate', EsipaSslCertBer, not_encrypted}] = public_key:pem_decode(EsipaSslCertPem),
-    {ok, EsipaSslCert} = 'PKIX1Explicit88':decode('Certificate', EsipaSslCertBer),
-    EsipaSslCert_TbsCertificate = maps:get(tbsCertificate, EsipaSslCert),
-    EsipaSslCert_SubjectPublicKeyInfo = maps:get(subjectPublicKeyInfo, EsipaSslCert_TbsCertificate),
+    {ok, EimCertPath} = application:get_env(onomondo_eim, eim_cert),
+    {ok, EimCertPem} = file:read_file(EimCertPath),
+    [{'Certificate', EimCertBer, not_encrypted}] = public_key:pem_decode(EimCertPem),
+    {ok, EimCert} = 'PKIX1Explicit88':decode('Certificate', EimCertBer),
+    EimCert_TbsCertificate = maps:get(tbsCertificate, EimCert),
+    EimCert_SubjectPublicKeyInfo = maps:get(subjectPublicKeyInfo, EimCert_TbsCertificate),
+
+    % Check certificate type
+    EimCert_algorithm = maps:get(algorithm, EimCert_SubjectPublicKeyInfo),
+    BrainpoolP256r1 = #{algorithm => {1,2,840,10045,2,1},
+                        parameters => <<6,9,43,36,3,3,2,8,1,1,7>>},
+    Prime256v1 = #{algorithm => {1,2,840,10045,2,1},
+		   parameters => <<6,8,42,134,72,206,61,3,1,7>>},
+    case EimCert_algorithm of
+	BrainpoolP256r1 -> ok;
+	Prime256v1 -> ok;
+	_ ->
+	    throw("Incorrect eIM certificate, only BrainpoolP256r1 or Prime256v1 may be used!")
+    end,
+
+    % Generate eIM configuration
     EimFqdn = string:join([inet:ntoa(EsipaIp), io_lib:format(":~B", [EsipaPort])], ""),
     EimConfigurationData = #{eimId => EimId, % Mandatory
 			     eimFqdn => EimFqdn, % Optional, but necessary to access the eIM
-			     counterValue => 0, % Mandatory
+			     counterValue => 1, % Mandatory
 			     associationToken => -1, %Optional: instruct the eUICC to calculate an association token
-			     eimPublicKeyData => {eimPublicKey, EsipaSslCert_SubjectPublicKeyInfo}}, % Mandatory
+			     eimPublicKeyData => {eimPublicKey, EimCert_SubjectPublicKeyInfo}}, % Mandatory
     EimConfigurationDataList = [EimConfigurationData],
     GetEimConfigurationDataResponse = #{eimConfigurationDataList => EimConfigurationDataList},
 
