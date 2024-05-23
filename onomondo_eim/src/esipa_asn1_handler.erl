@@ -114,8 +114,8 @@ handle_asn1(Req0, _State, {cancelSessionRequestEsipa, EsipaReq}) ->
     BaseUrl = maps:get(smdpAddress, WorkState),
 
     % setup ES9+ request message
-    CancelSessionReq = maps:get(cancelSessionResponse, EsipaReq),
-    Es9Req = case CancelSessionReq of
+    CancelSessionResp = maps:get(cancelSessionResponse, EsipaReq),
+    Es9Req = case CancelSessionResp of
 		 {cancelSessionResponseOk, CancelSessionRespOk} ->
 		     {cancelSessionRequestEs9,
 		      #{transactionId => TransactionId,
