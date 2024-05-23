@@ -93,7 +93,7 @@ handle_asn1(Req0, _State, {getBoundProfilePackageRequestEsipa, EsipaReq}) ->
 		 {compactDownloadResponseOk, _CompactAuthRespOk} ->
 		     throw("IPA Capability \"minimizeEsipaBytes\" (optional) not supported by this eIM")
 	     end,
-    
+
     % perform ES9+ request
     {getBoundProfilePackageResponse, Es9Resp} = es9p_client:request_json(Es9Req, BaseUrl),
 
@@ -134,7 +134,6 @@ handle_asn1(Req0, _State, {cancelSessionRequestEsipa, EsipaReq}) ->
     % setup ESipa response message
     % CancelSessionResponseEsipa and CancelSessionResponseEs9 share the exact same definition, so we may convert
     % without an extra case statement.
-
     ok = mnesia_db:work_finish(maps:get(pid, Req0), canceled, EsipaReq),
     {cancelSessionResponseEsipa, Es9Resp};
 
@@ -142,7 +141,6 @@ handle_asn1(Req0, _State, {cancelSessionRequestEsipa, EsipaReq}) ->
 handle_asn1(Req0, _State, {handleNotificationEsipa, EsipaReq}) ->
     case EsipaReq of
 	{pendingNotification, PendingNotif} ->
-
             % setup ES9+ request message
 	    Es9Req = case PendingNotif of
 			 {profileInstallationResult, PrfleInstRslt} ->
