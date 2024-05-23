@@ -123,6 +123,8 @@ get_rest_info(Req, State) ->
     {ok, Vsn} = application:get_key(onomondo_eim, vsn),
     {ok, EsipaSslCertPath} = application:get_env(onomondo_eim, esipa_ssl_cert),
     {ok, EsipaSslCertPem} = file:read_file(EsipaSslCertPath),
+    {ok, EimCertPath} = application:get_env(onomondo_eim, eim_cert),
+    {ok, EimCertPem} = file:read_file(EimCertPath),
     InfoList = {[
 		  {hostname, list_to_binary(Hostname)},
 		  {node, node()},
@@ -131,6 +133,7 @@ get_rest_info(Req, State) ->
 		  {esipa_ip, list_to_binary(inet:ntoa(EsipaIp))},
 		  {esipa_port, EsipaPort},
 		  {esipa_ssl_cert, EsipaSslCertPem},
+		  {eim_cert, EimCertPem},
 		  {get_eim_configuration_data_response, eim_cfg:gen_eim_configuration_data(response)},
 		  {eim_configuration_data, eim_cfg:gen_eim_configuration_data(single)}
 		]},
