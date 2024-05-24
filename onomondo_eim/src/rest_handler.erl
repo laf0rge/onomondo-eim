@@ -79,16 +79,18 @@ get_rest_lookup(Req, State, Facility) ->
 		   {Status, Timestamp, EidValue, Order, Outcome, Debuginfo} ->
 		       % Here a "resource" refers to the parameters that the REST API user has originally submitted
 		       % during create. We will only read the resource but not change it.
-		       Resource = {[{<<"eidValue">>, EidValue}, {<<"order">>, Order}]},
-		       io_lib:format("{\"status\": \"~p\", \"timestamp\": \"~p\", \"resource\": ~s, \"outcome\": ~s, \"debuginfo\": \"~s\"}",
-				     [Status, Timestamp,
-				      binary_to_list(jiffy:encode(Resource)), binary_to_list(jiffy:encode(Outcome)),
-				      binary_to_list(utils:binary_to_hex(term_to_binary(Debuginfo)))]);
-		   none -> "{\"status\": \"absent\"}";
-		   _ -> "{\"status\": \"error\"}"
+		       Resource = {[{eidValue, EidValue}, {order, Order}]},
+		       DebuginfoHex = utils:binary_to_hex(term_to_binary(Debuginfo)),
+		       TimestampStr = list_to_binary(io_lib:format("~p", [Timestamp])),
+		       {[{status, Status}, {timestamp, TimestampStr}, {resource, Resource}, {outcome, Outcome}, {debuginfo, DebuginfoHex}]};
+		   none ->
+		       {[{status, absent}]};
+		   _ ->
+		       {[{status, error}]}
 	       end,
-    logger:notice("REST: responding to client: ResourceId=~p, Response:~p", [ResourceId, list_to_binary(Response)]),
-    {list_to_binary(Response), Req, State}.
+    ResponseJson = jiffy:encode(Response),
+    logger:notice("REST: responding to client: ResourceId=~p, Response:~p", [ResourceId, ResponseJson]),
+    {ResponseJson, Req, State}.
 
 % Delete a specific resource
 get_rest_delete(Req, State, Facility) ->
@@ -96,12 +98,16 @@ get_rest_delete(Req, State, Facility) ->
     logger:notice("REST: client requests REST resource for delete: ResourceId=~p, Facility=~p", [ResourceId, Facility]),
     Result = mnesia_db:rest_delete(ResourceId, Facility),
     Response = case Result of
-		   ok -> "{\"status\": \"deleted\"}";
-		   none -> "{\"status\": \"absent\"}";
-		   _ -> "{\"status\": \"error\"}"
+		   ok ->
+		       {[{status, deleted}]};
+		   none ->
+		       {[{status, absent}]};
+		   _ ->
+		       {[{status, error}]}
 	       end,
-    logger:notice("REST: responding to client: ResourceId=~p, Response:~p", [ResourceId, list_to_binary(Response)]),
-    {list_to_binary(Response), Req, State}.
+    ResponseJson = jiffy:encode(Response),
+    logger:notice("REST: responding to client: ResourceId=~p, Response:~p", [ResourceId, ResponseJson]),
+    {ResponseJson, Req, State}.
 
 % Output a list of all pending resources to the requestor
 get_rest_list(Req, State, Facility) ->
