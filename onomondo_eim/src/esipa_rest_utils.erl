@@ -208,41 +208,41 @@ order_to_euiccPackageSigned(Order, EidValue) ->
 % generate a JSON encodeable outcome (JSON REST API) from an EuiccPackageResultDataSigned
 euiccPackageResultDataSigned_to_outcome(EuiccPackageResultDataSigned) ->
     EuiccResult = maps:get(euiccResult, EuiccPackageResultDataSigned),
-    Error = {[{<<"error">>, <<"malformedResult">>}]},
+    Error = {[{error, malformedResult}]},
     EuiccResultData2Json = fun(EuiccResultData) ->
 				   case EuiccResultData of
 				       {enableResult, EnableResult} ->
-					   {[{<<"enableResult">>, EnableResult}]};
+					   {[{enableResult, EnableResult}]};
 				       {disableResult, DisableResult} ->
-					   {[{<<"disableResult">>, DisableResult}]};
+					   {[{disableResult, DisableResult}]};
 				       {deleteResult, DeleteResult} ->
-					   {[{<<"deleteResult">>, DeleteResult}]};
+					   {[{deleteResult, DeleteResult}]};
 				       {listProfileInfoResult, _} ->
 					   % TODO: extract useful information from listProfileInfoResult
 					   % and format it as JSON encodeable outcome
-					   {[{<<"listProfileInfoResult">>, <<"absent">>}]};
+					   {[{listProfileInfoResult, absent}]};
 				       {getRATResult, _} ->
 					   % TODO: extract useful information from getRATResult
 					   % and format it as JSON encodeable outcome
-					   {[{<<"getRATResult">>, <<"absent">>}]};
+					   {[{getRATResult, absent}]};
 				       {configureAutoEnableResult, ConfigureAutoEnableResult} ->
-					   {[{<<"configureAutoEnableResult">>, ConfigureAutoEnableResult}]};
+					   {[{configureAutoEnableResult, ConfigureAutoEnableResult}]};
 				       {addEimResult, _} ->
 					   % TODO: extract useful information from addEimResult
 					   % and format it as JSON encodeable outcome
-					   {[{<<"addEimResult">>, <<"absent">>}]};
+					   {[{addEimResult, absent}]};
 				       {deleteEimResult, DeleteEimResult} ->
-					   {[{<<"deleteEimResult">>, DeleteEimResult}]};
+					   {[{deleteEimResult, DeleteEimResult}]};
 				       {updateEimResult, UpdateEimResult} ->
-					   {[{<<"updateEimResult">>, UpdateEimResult}]};
+					   {[{updateEimResult, UpdateEimResult}]};
 				       {listEimResult, _} ->
 					   % TODO: extract useful information from listEimResult
 					   % and format it as JSON encodeable outcome
-					   {[{<<"listEimResult">>, <<"absent">>}]};
+					   {[{listEimResult, absent}]};
 				       {rollbackResult, RollbackResult} ->
-					   {[{<<"rollbackResult">>, RollbackResult}]};
+					   {[{rollbackResult, RollbackResult}]};
 				       {processingTerminated, ProcessingTerminated} ->
-					   {[{<<"processingTerminated">>, ProcessingTerminated}]};
+					   {[{processingTerminated, ProcessingTerminated}]};
 				       _ ->
 					   Error
 				   end
@@ -258,26 +258,26 @@ profileInstallationResult_to_outcome(ProfileInstallationResult) ->
     case FinalResult of
 	{successResult, _} ->
 	    Iccid = maps:get(iccid, NotificationMetadata),
-	    [{[{<<"profileInstallationResult">>,
-		{[{ <<"finalResult">>, <<"successResult">>},
-		  { <<"iccid">>, utils:binary_to_hex(Iccid)}]}
+	    [{[{profileInstallationResult,
+		{[{finalResult, successResult},
+		  {iccid, utils:binary_to_hex(Iccid)}]}
 	       }]}];
 	_ ->
-	    [{[{<<"profileInstallationResult">>,
-		{[{ <<"finalResult">>, <<"errorResult">>}]}
+	    [{[{profileInstallationResult,
+		{[{finalResult, errorResult}]}
 	       }]}]
     end.
 
 % generate a JSON encodeable outcome (JSON REST API) from an OtherSignedNotification
 otherSignedNotification_to_outcome(_OtherSignedNotification) ->
     % TODO: extract some useful information from OtherSignedNotification
-    [{[{<<"notificationResult">>, <<"otherSignedNotification">>}]}].
+    [{[{notificationResult, otherSignedNotification}]}].
 
 % generate a JSON encodeable outcome (JSON REST API) from an CancelSessionResponse
 cancelSessionResponse_to_outcome(CancelSessionResponse) ->
     case CancelSessionResponse of
 	{cancelSessionResponseOk, _} ->
-	    [{[{<<"cancelSessionResult">>, ok}]}];
+	    [{[{cancelSessionResult, ok}]}];
 	_ ->
-	    [{[{<<"cancelSessionResult">>, error}]}]
+	    [{[{cancelSessionResult, error}]}]
     end.
