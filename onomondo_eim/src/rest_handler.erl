@@ -78,7 +78,7 @@ get_rest_lookup(Req, State, Facility) ->
     Response = case Result of
 		   {Status, Timestamp, EidValue, Order, Outcome, Debuginfo} ->
 		       % Here a "resource" refers to the parameters that the REST API user has originally submitted
-		       % during create. We will only read from the resource but not alter it.
+		       % during create. We will only read the resource but not change it.
 		       Resource = {[{<<"eidValue">>, EidValue}, {<<"order">>, Order}]},
 		       io_lib:format("{\"status\": \"~p\", \"timestamp\": \"~p\", \"resource\": ~s, \"outcome\": ~s, \"debuginfo\": \"~s\"}",
 				     [Status, Timestamp,
