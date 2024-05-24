@@ -205,6 +205,81 @@ order_to_euiccPackageSigned(Order, EidValue) ->
 	      euiccPackage => EuiccPackage}
     end.
 
+memberOrNil(Key, Map) ->
+    case maps:is_key(Key, Map) of
+	true ->
+	    {Key, maps:get(Key, Map)};
+	_ ->
+	    nil
+    end.
+
+memberOrNilHex(Key, Map) ->
+    case maps:is_key(Key, Map) of
+	true ->
+	    {Key, utils:binary_to_hex(maps:get(Key, Map))};
+	_ ->
+	    nil
+    end.
+
+result_to_json_listProfileInfoResult(ListProfileInfoResult) ->
+    ProfileInfo2Json = fun(ProfileInfo) ->
+			       List = [
+				       memberOrNilHex(iccid, ProfileInfo),
+				       memberOrNilHex(isdpAid, ProfileInfo),
+				       memberOrNil(profileState, ProfileInfo),
+				       memberOrNil(profileNickname, ProfileInfo),
+				       memberOrNil(serviceProviderName, ProfileInfo),
+				       memberOrNil(profileName, ProfileInfo),
+				       memberOrNil(iconType, ProfileInfo),
+				       memberOrNilHex(icon, ProfileInfo),
+				       memberOrNil(profileClass, ProfileInfo)
+				       % TODO: also extract useful information from the following (optional) fields:
+				       % notificationConfigurationInfo
+				       % profileOwner
+				       % dpProprietaryData
+				       % profilePolicyRules
+				       % serviceSpecificDataStoredInEuicc
+				      ],
+			       {lists:filter(fun(Member) -> Member /= nil end, List)}
+		       end,
+
+    case ListProfileInfoResult of
+	{profileInfoListOk, ProfileInfoListOk} ->
+	    ProfileInfoList = [ProfileInfo2Json(O) || O <- ProfileInfoListOk],
+	    ListProfileInfoResultValue = {[{finalResult, ok}, {profileInfoList, ProfileInfoList}]},
+	    {[{listProfileInfoResult, ListProfileInfoResultValue}]};
+        _ ->
+	    {[{listProfileInfoResult, {[{finalResult, error}]}}]}
+    end.
+
+result_to_json_listEimResult(ListEimResult) ->
+    EimIdList2Json = fun(EimIdInfo) ->
+			       List = [
+				       memberOrNil(eimId, EimIdInfo),
+				       memberOrNil(eimIdType, EimIdInfo)
+				      ],
+			       {lists:filter(fun(Member) -> Member /= nil end, List)}
+		       end,
+
+    case ListEimResult of
+	{eimIdList, EimIdList} ->
+	    EimIdInfoList = [EimIdList2Json(O) || O <- EimIdList],
+	    ListEimResultValue = {[{finalResult, ok}, {eimIdList, EimIdInfoList}]},
+	    {[{listEimResult, ListEimResultValue}]};
+        _ ->
+	    {[{listEimResult, {[{finalResult, error}]}}]}
+    end.
+
+result_to_json_addEimResult(AddEimResult) ->
+    case AddEimResult of
+	{associationToken, AssociationToken} ->
+	    {[{addEimResult, {[{addEimResultCode, ok}, {associationToken, AssociationToken}]}}]};
+	{addEimResultCode, AddEimResultCode} ->
+	    {[{addEimResult, {[{addEimResultCode, AddEimResultCode}]}}]};
+	_ ->
+	    {[{addEimResult, {[{addEimResultCode, malformedResult}]}}]}
+    end.
+
 % generate a JSON encodeable outcome (JSON REST API) from an EuiccPackageResultDataSigned
 euiccPackageResultDataSigned_to_outcome(EuiccPackageResultDataSigned) ->
     EuiccResult = maps:get(euiccResult, EuiccPackageResultDataSigned),
@@ -217,28 +292,22 @@ euiccPackageResultDataSigned_to_outcome(EuiccPackageResultDataSigned) ->
 					   {[{disableResult, DisableResult}]};
 				       {deleteResult, DeleteResult} ->
 					   {[{deleteResult, DeleteResult}]};
-				       {listProfileInfoResult, _} ->
-					   % TODO: extract useful information from listProfileInfoResult
-					   % and format it as JSON encodeable outcome
-					   {[{listProfileInfoResult, absent}]};
+				       {listProfileInfoResult, ListProfileInfoResult} ->
+					   result_to_json_listProfileInfoResult(ListProfileInfoResult);
 				       {getRATResult, _} ->
 					   % TODO: extract useful information from getRATResult
 					   % and format it as JSON encodeable outcome
 					   {[{getRATResult, absent}]};
 				       {configureAutoEnableResult, ConfigureAutoEnableResult} ->
 					   {[{configureAutoEnableResult, ConfigureAutoEnableResult}]};
-				       {addEimResult, _} ->
-					   % TODO: extract useful information from addEimResult
-					   % and format it as JSON encodeable outcome
-					   {[{addEimResult, absent}]};
+				       {addEimResult, AddEimResult} ->
+					   result_to_json_addEimResult(AddEimResult);
 				       {deleteEimResult, DeleteEimResult} ->
 					   {[{deleteEimResult, DeleteEimResult}]};
 				       {updateEimResult, UpdateEimResult} ->
 					   {[{updateEimResult, UpdateEimResult}]};
-				       {listEimResult, _} ->
-					   % TODO: extract useful information from listEimResult
-					   % and format it as JSON encodeable outcome
-					   {[{listEimResult, absent}]};
+				       {listEimResult, ListEimResult} ->
+					   result_to_json_listEimResult(ListEimResult);
 				       {rollbackResult, RollbackResult} ->
 					   {[{rollbackResult, RollbackResult}]};
 				       {processingTerminated, ProcessingTerminated} ->
