@@ -206,7 +206,9 @@ handle_asn1(Req0, _State, {getEimPackageRequest, EsipaReq}) ->
 			    error ->
 				{eimPackageError, undefinedError};
 			    _ ->
-				{euiccPackageRequest, #{euiccPackageSigned => EuiccPackageSigned, eimSignature => <<0,0,0>>}}
+				{euiccPackageRequest,
+				 #{euiccPackageSigned => EuiccPackageSigned,
+				   eimSignature => crypto_utils:sign_euiccPackageSigned(EuiccPackageSigned)}}
 			end;
 		    {eco, Order} ->
 			EuiccPackageSigned = esipa_rest_utils:eco_order_to_euiccPackageSigned(Order, EidValue),
@@ -214,7 +216,9 @@ handle_asn1(Req0, _State, {getEimPackageRequest, EsipaReq}) ->
 			    error ->
 				{eimPackageError, undefinedError};
 			    _ ->
-				{euiccPackageRequest, #{euiccPackageSigned => EuiccPackageSigned, eimSignature => <<0,0,0>>}}
+				{euiccPackageRequest,
+				 #{euiccPackageSigned => EuiccPackageSigned,
+				   eimSignature => crypto_utils:sign_euiccPackageSigned(EuiccPackageSigned)}}
 			end;
 		    none ->
 			{eimPackageError, noEimPackageAvailable};
