@@ -13,13 +13,13 @@
 -export([work_fetch/2, work_pickup/1, work_pickup/2, work_update/2, work_bind/2, work_finish/3]).
 
 % euicc functions, to be called by the eIM code (from inside)
--export([euicc_counter_tick/1]).
+-export([euicc_counter_tick/1, euicc_counter_get/1]).
 
 % debugging
 -export([dump_rest/0, dump_work/0, dump_euicc/0]).
 
 -record(rest, {resourceId :: binary(), facility :: atom(), eidValue :: binary(), order, status :: atom(), timestamp :: integer(), outcome, debuginfo :: binary()}).
--record(work, {pid :: pid(), resourceId :: binary(), transactionId :: binary(), order, state}).
+-record(work, {pid :: pid(), resourceId :: binary(), transactionId :: binary(), eidValue :: binary(), order, state}).
 -record(euicc, {eidValue :: binary(), counterValue :: integer()}).
 
 %TODO: We need some mechanism that looks through the work table from time to time and checks the timestemp (field not
@@ -193,7 +193,8 @@ work_fetch(EidValue, Pid) ->
 		    case Rows of
 			[Row | _] ->
 			    % Create an entry in the work table
-			    WorkRow = #work{pid=Pid, resourceId=Row#rest.resourceId, state=none, order=Row#rest.order},
+			    WorkRow = #work{pid=Pid, resourceId=Row#rest.resourceId, transactionId=none,
+					    eidValue=Row#rest.eidValue, order=Row#rest.order, state=none},
 			    case mnesia:write(WorkRow) of
 				ok ->
 				    % We are now working on this order
@@ -292,13 +293,13 @@ work_bind(Pid, TransactionId) ->
 % before. It can also be called multiple times.
 work_pickup(Pid) ->
     Trans = fun() ->
-		    Q = qlc:q([{X#work.order, X#work.state} || X <- mnesia:table(work), X#work.pid == Pid]),
+		    Q = qlc:q([{X#work.eidValue, X#work.order, X#work.state} || X <- mnesia:table(work), X#work.pid == Pid]),
 		    qlc:e(Q)
 	    end,
     {atomic, Result} = mnesia:transaction(Trans),
     case Result of
-	[{Order, State} | _] ->
-	    {Order, State};
+	[{EidValue, Order, State} | _] ->
+	    {EidValue, Order, State};
 	[] ->
 	    logger:error("Work: no work item found under specified Pid, already finished?, not fetched?: Pid=~p", [Pid]),
 	    none;
@@ -413,6 +414,30 @@ euicc_counter_tick(EidValue) ->
 	    {ok, CounterValue};
 	_ ->
 	    logger:error("eUICC: cannot increment counterValue, database error: eID=~p", [EidValue]),
+	    error
+    end.
+
+euicc_counter_get(EidValue) ->
+    Trans = fun() ->
+		    Q = qlc:q([X || X <- mnesia:table(euicc), X#euicc.eidValue == EidValue]),
+		    Rows = qlc:e(Q),
+		    case Rows of
+			[Row | _] ->
+			    {ok, Row#euicc.counterValue};
+			[] ->
+			    error;
+			_ ->
+			    error
+		    end
+	    end,
+
+    {atomic , Result} = mnesia:transaction(Trans),
+    case Result of
+        {ok, CounterValue} ->
+	    logger:notice("eUICC: reading current counterValue: eID=~p, counter=~p", [EidValue, CounterValue]),
+	    {ok, CounterValue};
+	_ ->
+	    logger:error("eUICC: cannot read current counterValue, database error: eID=~p", [EidValue]),
 	    error
     end.
 

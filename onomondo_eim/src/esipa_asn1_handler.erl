@@ -15,7 +15,7 @@ handle_asn1(Req0, _State, {initiateAuthenticationRequestEsipa, EsipaReq}) ->
     % However in ES9+ those fields are mandatory. This means we may need to fill in those fields here, from cached
     % values.
 
-    {_, WorkState} = mnesia_db:work_pickup(maps:get(pid, Req0)),
+    {_, _, WorkState} = mnesia_db:work_pickup(maps:get(pid, Req0)),
     BaseUrl = maps:get(smdpAddress, EsipaReq),
     NewWorkState = WorkState#{smdpAddress => BaseUrl},
     mnesia_db:work_update(maps:get(pid, Req0), NewWorkState),
@@ -43,7 +43,7 @@ handle_asn1(Req0, _State, {initiateAuthenticationRequestEsipa, EsipaReq}) ->
 %GSMA SGP.32, section 6.3.2.2
 handle_asn1(Req0, _State, {authenticateClientRequestEsipa, EsipaReq}) ->
     TransactionId = maps:get(transactionId, EsipaReq),
-    {_, WorkState} = mnesia_db:work_pickup(maps:get(pid, Req0), TransactionId),
+    {_, _, WorkState} = mnesia_db:work_pickup(maps:get(pid, Req0), TransactionId),
     BaseUrl = maps:get(smdpAddress, WorkState),
 
     % setup ES9+ request message
@@ -76,7 +76,7 @@ handle_asn1(Req0, _State, {authenticateClientRequestEsipa, EsipaReq}) ->
 %GSMA SGP.32, section 6.3.2.3
 handle_asn1(Req0, _State, {getBoundProfilePackageRequestEsipa, EsipaReq}) ->
     TransactionId = maps:get(transactionId, EsipaReq),
-    {_, WorkState} = mnesia_db:work_pickup(maps:get(pid, Req0), TransactionId),
+    {_, _, WorkState} = mnesia_db:work_pickup(maps:get(pid, Req0), TransactionId),
     BaseUrl = maps:get(smdpAddress, WorkState),
 
     % setup ES9+ request message
@@ -110,7 +110,7 @@ handle_asn1(Req0, _State, {getBoundProfilePackageRequestEsipa, EsipaReq}) ->
 %GSMA SGP.32, section 6.3.2.5
 handle_asn1(Req0, _State, {cancelSessionRequestEsipa, EsipaReq}) ->
     TransactionId = maps:get(transactionId, EsipaReq),
-    {_, WorkState} = mnesia_db:work_pickup(maps:get(pid, Req0), TransactionId),
+    {_, _, WorkState} = mnesia_db:work_pickup(maps:get(pid, Req0), TransactionId),
     BaseUrl = maps:get(smdpAddress, WorkState),
 
     % setup ES9+ request message
@@ -168,7 +168,7 @@ handle_asn1(Req0, _State, {handleNotificationEsipa, EsipaReq}) ->
 		     end,
 
             % perform ES9+ request (We expect an empty response in this case)
-	    {_, WorkState} = mnesia_db:work_pickup(maps:get(pid, Req0)),
+	    {_, _, WorkState} = mnesia_db:work_pickup(maps:get(pid, Req0)),
 	    BaseUrl = maps:get(smdpAddress, WorkState),
 	    {} = es9p_client:request_json(Es9Req, BaseUrl);
 
@@ -252,17 +252,41 @@ handle_asn1(Req0, _State, {provideEimPackageResult, EsipaReq}) ->
 		      end
 	       end,
 
+    CheckCounterValue = fun(Map) ->
+				{EidValue, _, _} = mnesia_db:work_pickup(maps:get(pid, Req0)),
+				CounterValueIpad = maps:get(counterValue, Map),
+				{ok, CounterValueEim} = mnesia_db:euicc_counter_get(EidValue),
+				case CounterValueIpad of
+				    CounterValueEim ->
+					ok;
+				    _ ->
+					logger:error("invalid euiccPackageResultSigned, counterValue mismatch: CounterValueIpad=~p, CounterValueEim=~p",
+						     [CounterValueIpad, CounterValueEim]),
+					error
+				end
+			end,
+
     Outcome = case EuiccPackageResult of
 		  {euiccPackageResultSigned, EuiccPackageResultSigned} ->
 		      EuiccPackageResultDataSigned = maps:get(euiccPackageResultDataSigned, EuiccPackageResultSigned),
 		      WorkBind(EuiccPackageResultDataSigned),
-		      esipa_rest_utils:euiccPackageResultDataSigned_to_outcome(EuiccPackageResultDataSigned);
+		      case CheckCounterValue(EuiccPackageResultDataSigned) of
+			  ok ->
+			      esipa_rest_utils:euiccPackageResultDataSigned_to_outcome(EuiccPackageResultDataSigned);
+			  _ ->
+			      [{[{euiccPackageResultSigned, error}]}]
+			  end;
 		  {euiccPackageErrorSigned, EuiccPackageErrorSigned} ->
 		      EuiccPackageErrorDataSigned = maps:get(euiccPackageErrorDataSigned, EuiccPackageErrorSigned),
 		      WorkBind(EuiccPackageErrorDataSigned),
-		      %TODO: create an esipa_rest_utils:euiccPackageErrorSigned_to_outcome that extracts useful
-		      %error information to JSON
-		      [{[{euiccPackageErrorSigned, error}]}];
+		      case CheckCounterValue(EuiccPackageErrorDataSigned) of
+			  ok ->
+			      %TODO: create an esipa_rest_utils:euiccPackageErrorSigned_to_outcome that extracts useful
+			      %error information to JSON
+			      [{[{euiccPackageErrorSigned, error}]}];
+			  _ ->
+			      [{[{euiccPackageResultSigned, error}]}]
+			  end;
 		  {euiccPackageErrorUnsigned, _} ->
 		      %TODO: create an esipa_rest_utils:euiccPackageErrorUnsigned_to_outcome that extracts useful
 		      %error information to JSON
