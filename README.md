@@ -48,9 +48,13 @@ cases those parameters do not have to be modified.
 * eim_id: Configure the eimId of the eIM instance.
 * es9p_ssl_disable: Set this to true to use HTTP instead of HTTPs. This is a debug feature intended for lab setups to
   simplify the creation of protocol traces.
+* eim_cert: Configure the location of the certificate that is used for verification of eUICC packages.
+* eim_key: Configure the location of the private key that is used for signing eUICC packages.
+* counter_value: Set the start value of the replay protection counter (eUICC packages).
 
 ### vm.args
 
 * See also: https://www.erlang.org/doc/man/erl.html
 * mnesia dir: configure the location of the mnesia database. The default setting will store the dabase in
   `./_rel/onomondo_eim_release/db`.
+
