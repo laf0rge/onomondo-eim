@@ -234,7 +234,7 @@ handle_asn1(Req0, _State, {provideEimPackageResult, EsipaReq}) ->
     % only, but it also may contain results/notifications intended to be forwarded to the SMDP+. We may forward those
     % results/notification to the SMDP+ in a similar way like we already do it in handleNotificationEsipa.
     % TODO: Depending on the contents in provideEimPackageResult we will conditionally know the TransactionId. This
-    % resumbably is the case for notifications belonging to some kind of transactions. Otherwise we may have an OID
+    % presumbably is the case for notifications belonging to some kind of transactions. Otherwise we may have an OID
     % of the SMDP+, which we may use to determine the BaseUrl.
 
     {ePRAndNotifications, EPRAndNotifications} = EsipaReq,
