@@ -15,6 +15,7 @@ gen_eim_configuration_data(Style) ->
     {ok, EimCert} = 'PKIX1Explicit88':decode('Certificate', EimCertBer),
     EimCert_TbsCertificate = maps:get(tbsCertificate, EimCert),
     EimCert_SubjectPublicKeyInfo = maps:get(subjectPublicKeyInfo, EimCert_TbsCertificate),
+    {ok, CounterValue} = application:get_env(onomondo_eim, counter_value),
 
     % Check certificate type
     EimCert_algorithm = maps:get(algorithm, EimCert_SubjectPublicKeyInfo),
@@ -33,7 +34,7 @@ gen_eim_configuration_data(Style) ->
     EimFqdn = string:join([inet:ntoa(EsipaIp), io_lib:format(":~B", [EsipaPort])], ""),
     EimConfigurationData = #{eimId => EimId, % Mandatory
 			     eimFqdn => EimFqdn, % Optional, but necessary to access the eIM
-			     counterValue => 1, % Mandatory
+			     counterValue => CounterValue, % Mandatory
 			     associationToken => -1, %Optional: instruct the eUICC to calculate an association token
 			     eimPublicKeyData => {eimPublicKey, EimCert_SubjectPublicKeyInfo}}, % Mandatory
     EimConfigurationDataList = [EimConfigurationData],

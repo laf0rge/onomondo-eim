@@ -131,6 +131,7 @@ get_rest_info(Req, State) ->
     {ok, EsipaSslCertPem} = file:read_file(EsipaSslCertPath),
     {ok, EimCertPath} = application:get_env(onomondo_eim, eim_cert),
     {ok, EimCertPem} = file:read_file(EimCertPath),
+    {ok, CounterValue} = application:get_env(onomondo_eim, counter_value),
     InfoList = {[
 		  {hostname, list_to_binary(Hostname)},
 		  {node, node()},
@@ -141,7 +142,8 @@ get_rest_info(Req, State) ->
 		  {esipa_ssl_cert, EsipaSslCertPem},
 		  {eim_cert, EimCertPem},
 		  {get_eim_configuration_data_response, eim_cfg:gen_eim_configuration_data(response)},
-		  {eim_configuration_data, eim_cfg:gen_eim_configuration_data(single)}
+		  {eim_configuration_data, eim_cfg:gen_eim_configuration_data(single)},
+		  {counter_value, CounterValue}
 		]},
     InfoListJson = utils:join_binary_list(jiffy:encode(InfoList)),
     Response = io_lib:format("{\"resource_id_list\": ~s}", [binary_to_list(InfoListJson)]),
