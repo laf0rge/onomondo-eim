@@ -1,6 +1,6 @@
 #!/bin/bash
 . ./tryme.cfg
-EIM_ID="eIM"
+EIM_ID="eIM2"
 JSON='{ "eidValue" : "'$EID'", "order" : { "eco" : [ { "deleteEim" : { "eimId" : "'$EIM_ID'" } } ] } }'
 RC=`./restop.py -c -f eco -j "$JSON"`
 echo $RC
