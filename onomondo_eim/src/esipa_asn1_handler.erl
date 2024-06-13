@@ -36,6 +36,7 @@ handle_asn1(Req0, _State, {initiateAuthenticationRequestEsipa, EsipaReq}) ->
                         % maps:merge(InitAuthOk, #{matchingId => FIXME, ctxPrams1 => FIXME}),
 			{initiateAuthenticationOkEsipa, InitAuthOk};
 		    {initiateAuthenticationError, InitAuthErr} ->
+			ok = mnesia_db:work_finish(maps:get(pid, Req0), [{[{procedureError, initiateAuthenticationError}]}], EsipaReq),
 			{initiateAuthenticationErrorEsipa, InitAuthErr}
 		end,
     {initiateAuthenticationResponseEsipa, EsipaResp};
@@ -54,6 +55,7 @@ handle_asn1(Req0, _State, {authenticateClientRequestEsipa, EsipaReq}) ->
 		      #{transactionId => TransactionId,
 			authenticateServerResponse => {authenticateResponseOk, AuthRespOk}}};
 		 {authenticateResponseError, AuthRespErr} ->
+		     ok = mnesia_db:work_finish(maps:get(pid, Req0), [{[{procedureError, authenticateResponseError}]}], EsipaReq),
 		     {authenticateClientRequest,
 		      #{transactionId => TransactionId,
 			authenticateServerResponse => {authenticateResponseError, AuthRespErr}}};
@@ -69,6 +71,7 @@ handle_asn1(Req0, _State, {authenticateClientRequestEsipa, EsipaReq}) ->
 		    {authenticateClientOk, AuthClntRespEs9} ->
 			{authenticateClientOkDPEsipa, AuthClntRespEs9};
 		    {authenticateClientError, AuthClntErr} ->
+			ok = mnesia_db:work_finish(maps:get(pid, Req0), [{[{procedureError, authenticateClientError}]}], EsipaReq),
 			{authenticateClientErrorEsipa, AuthClntErr}
 		end,
     {authenticateClientResponseEsipa, EsipaResp};
@@ -87,6 +90,7 @@ handle_asn1(Req0, _State, {getBoundProfilePackageRequestEsipa, EsipaReq}) ->
 		      #{transactionId => TransactionId,
 			prepareDownloadResponse => {downloadResponseOk, DwnldRespOk}}};
 		 {downloadResponseError, DwnldRespErr} ->
+		     ok = mnesia_db:work_finish(maps:get(pid, Req0), [{[{procedureError, downloadResponseError}]}], EsipaReq),
 		     {getBoundProfilePackageRequest,
 		      #{transactionId => TransactionId,
 			prepareDownloadResponse => {downloadResponseError, DwnldRespErr}}};
@@ -103,6 +107,7 @@ handle_asn1(Req0, _State, {getBoundProfilePackageRequestEsipa, EsipaReq}) ->
 			% (in case IPA Capability 'minimizeEsipaBytes' is used, the transactionId has to be removed.)
 			{getBoundProfilePackageOkEsipa, GetBndPrflePkgOk};
 		    {getBoundProfilePackageError, GetBndPrflePkgErr} ->
+			ok = mnesia_db:work_finish(maps:get(pid, Req0), [{[{procedureError, getBoundProfilePackageError}]}], EsipaReq),
 			{getBoundProfilePackageErrorEsipa, GetBndPrflePkgErr}
 		end,
     {getBoundProfilePackageResponseEsipa, EsipaResp};
@@ -121,6 +126,7 @@ handle_asn1(Req0, _State, {cancelSessionRequestEsipa, EsipaReq}) ->
 		      #{transactionId => TransactionId,
 			cancelSessionResponse => {cancelSessionResponseOk, CancelSessionRespOk}}};
 		 {cancelSessionResponseError, CancelSessionRespErr} ->
+		     ok = mnesia_db:work_finish(maps:get(pid, Req0), [{[{procedureError, cancelSessionResponseError}]}], EsipaReq),
 		     {cancelSessionRequestEs9,
 		      #{transactionId => TransactionId,
 			cancelSessionResponse => {cancelSessionResponseError, CancelSessionRespErr}}};
@@ -170,7 +176,12 @@ handle_asn1(Req0, _State, {handleNotificationEsipa, EsipaReq}) ->
             % perform ES9+ request (We expect an empty response in this case)
 	    {_, _, WorkState} = mnesia_db:work_pickup(maps:get(pid, Req0)),
 	    BaseUrl = maps:get(smdpAddress, WorkState),
-	    {} = es9p_client:request_json(Es9Req, BaseUrl);
+	    case es9p_client:request_json(Es9Req, BaseUrl) of
+		{} ->
+		    ok;
+		_ ->
+		    ok = mnesia_db:work_finish(maps:get(pid, Req0), [{[{procedureError, handleNotificationError}]}], EsipaReq)
+	    end;
 
 	{provideEimPackageResult, _PrvdeEimPkgRslt} ->
 	    %Use the already existing handle_asn1 function to prcess the provideEimPackageResult we got here
@@ -198,13 +209,16 @@ handle_asn1(Req0, _State, {getEimPackageRequest, EsipaReq}) ->
     EsipaResp = case Work of
 		    {download, Order} ->
 			{[{<<"download">>, {[{<<"activationCode">>, ActivationCode}]}}]} = Order,
+			mnesia_db:work_update(maps:get(pid, Req0), #{}),
 			{profileDownloadTriggerRequest, #{profileDownloadData => {activationCode, ActivationCode}}};
 		    {psmo, Order} ->
 			TransactionIdPsmo = rand:bytes(16),
 			mnesia_db:work_bind(maps:get(pid, Req0), TransactionIdPsmo),
 			EuiccPackageSigned = esipa_rest_utils:psmo_order_to_euiccPackageSigned(Order, EidValue, TransactionIdPsmo),
+			mnesia_db:work_update(maps:get(pid, Req0), #{}),
 			case EuiccPackageSigned of
 			    error ->
+				ok = mnesia_db:work_finish(maps:get(pid, Req0), [{[{procedureError, badPsmo}]}], EsipaReq),
 				{eimPackageError, undefinedError};
 			    _ ->
 				{euiccPackageRequest,
@@ -215,8 +229,10 @@ handle_asn1(Req0, _State, {getEimPackageRequest, EsipaReq}) ->
 			TransactionIdEco = rand:bytes(16),
 			mnesia_db:work_bind(maps:get(pid, Req0), TransactionIdEco),
 			EuiccPackageSigned = esipa_rest_utils:eco_order_to_euiccPackageSigned(Order, EidValue, TransactionIdEco),
+			mnesia_db:work_update(maps:get(pid, Req0), #{}),
 			case EuiccPackageSigned of
 			    error ->
+				ok = mnesia_db:work_finish(maps:get(pid, Req0), [{[{procedureError, badEco}]}], EsipaReq),
 				{eimPackageError, undefinedError};
 			    _ ->
 				{euiccPackageRequest,
@@ -226,9 +242,9 @@ handle_asn1(Req0, _State, {getEimPackageRequest, EsipaReq}) ->
 		    none ->
 			{eimPackageError, noEimPackageAvailable};
 		    _ ->
+			ok = mnesia_db:work_finish(maps:get(pid, Req0), [{[{procedureError, badOrder}]}], EsipaReq),
 			{eimPackageError, undefinedError}
 		end,
-    mnesia_db:work_update(maps:get(pid, Req0), #{}),
     {getEimPackageResponse, EsipaResp};
 
 %GSMA SGP.32, section 6.3.2.7

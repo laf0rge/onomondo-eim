@@ -38,15 +38,22 @@ make_req_json(BaseUrl, Function, JsonBody) ->
     SslOptions = [ {verify, verify_none} ],
     Options = [ {ssl_options, SslOptions}, with_body ],
     logger:notice("Tx ES9+ JSON:~nURL=~p~nReqHeaders:~p~nReqBody=~p", [URL, ReqHeaders, ReqBody]),
-    {ok, StatusCode, RespHeaders, RespBody} = hackney:request(Method, URL, ReqHeaders, ReqBody, Options),
-    logger:notice("Rx ES9+ JSON:~nStatusCode=~p~nRespHeaders=~p~nRespBody=~p", [StatusCode, RespHeaders, RespBody]),
-    % TODO: verify RespHeaders: X-Admin-Protocol
-    % TODO: verify RespHeaders: Content-Type
-    RespBodyDecoded = case StatusCode of
-			  200 -> jiffy:decode(RespBody, [return_maps]);
-			  _ -> <<>>
-		      end,
-    {ok, StatusCode, RespBodyDecoded}.
+
+    % Perform request
+    case hackney:request(Method, URL, ReqHeaders, ReqBody, Options) of
+	{ok, StatusCode, RespHeaders, RespBody} ->
+	    logger:notice("Rx ES9+ JSON:~nStatusCode=~p~nRespHeaders=~p~nRespBody=~p", [StatusCode, RespHeaders, RespBody]),
+	    % TODO: verify RespHeaders: X-Admin-Protocol
+	    % TODO: verify RespHeaders: Content-Type
+	    RespBodyDecoded = case StatusCode of
+				  200 -> jiffy:decode(RespBody, [return_maps]);
+				  _ -> <<>>
+			      end,
+	    {ok, StatusCode, RespBodyDecoded};
+	_ ->
+	    logger:notice("ES9+ request to ~s failed", [URL]),
+	    {ok, 503, ""}
+    end.
 
 % send an ES9+ HTTP request in ASN.1 format over HTTP binding
 make_req_asn1(BaseUrl, Asn1Body) ->
@@ -63,15 +70,23 @@ make_req_asn1(BaseUrl, Asn1Body) ->
     Options = [ {ssl_options, SslOptions}, with_body ],
     logger:notice("Tx ES9+ ASN.1:~nURL=~p~nReqHeaders=~p~nReqBody=~p", [URL, ReqHeaders, ReqBody]),
     {ok, StatusCode, RespHeaders, RespBody} = hackney:request(Method, URL, ReqHeaders, ReqBody, Options),
-    logger:notice("Rx ES9+ ASN.1:~nStatusCode=~p~nRespHeaders=~p~nRespBody=~p", [StatusCode, RespHeaders, RespBody]),
-    % TODO: verify RespHeaders: X-Admin-Protocol
-    % TODO: verify RespHeaders: Content-Type
-    RespBodyDecoded = case StatusCode of
-			  200 -> {ok, Asn1Decoded} = 'RSPDefinitions':decode('RemoteProfileProvisioningResponse', RespBody),
-				 Asn1Decoded;
-			  _ -> <<>>
-		      end,
-    {ok, StatusCode, RespBodyDecoded}.
+
+    % Perform request
+    case hackney:request(Method, URL, ReqHeaders, ReqBody, Options) of
+	{ok, StatusCode, RespHeaders, RespBody} ->
+	    logger:notice("Rx ES9+ ASN.1:~nStatusCode=~p~nRespHeaders=~p~nRespBody=~p", [StatusCode, RespHeaders, RespBody]),
+	    % TODO: verify RespHeaders: X-Admin-Protocol
+	    % TODO: verify RespHeaders: Content-Type
+	    RespBodyDecoded = case StatusCode of
+				  200 -> {ok, Asn1Decoded} = 'RSPDefinitions':decode('RemoteProfileProvisioningResponse', RespBody),
+					 Asn1Decoded;
+				  _ -> <<>>
+			      end,
+	    {ok, StatusCode, RespBodyDecoded};
+	_ ->
+	    logger:notice("ES9+ request to ~s failed", [URL]),
+	    {ok, 503, ""}
+    end.
 
 % encode RSP ASN.1 data of given type + base64-encode it
 rsp_enc_asn1_b64(TypeName, Data) ->
@@ -170,11 +185,15 @@ request_json({cancelSessionRequestEs9, CancelSessReq}, BaseUrl) ->
 % GSMA SGP.22, section 6.5.2.9 and section 6.6.2.4
 request_json({handleNotification, HandleNotifReq}, BaseUrl) ->
     Json = #{<<"pendingNotification">> => rsp_enc_asn1_b64('PendingNotification', maps:get(pendingNotification, HandleNotifReq))},
-    {ok, _HtppStatus, _JsonResp} = make_req_json(BaseUrl, "handleNotification", Json),
-    % TODO: check HTTP status?
-    % There is no response defined for this function (see also SGP.22, section 5.6.4), so we send just forward an
-    % an empty tuple.
-    {}.
+    {ok, HtppStatus, _JsonResp} = make_req_json(BaseUrl, "handleNotification", Json),
+    case HtppStatus of
+	200 ->
+            % There is no response defined for this function (see also SGP.22, section 5.6.4), so we send just forward an
+            % an empty tuple.
+	    {};
+	_ ->
+	    error
+    end.
 
 % issue a RemoteProfileProvisioningRequest in its ASN.1 form
 % (See also SGP.22 6.6.2.1 - 6.6.2.5)
