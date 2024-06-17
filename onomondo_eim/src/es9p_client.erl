@@ -191,6 +191,9 @@ request_json({handleNotification, HandleNotifReq}, BaseUrl) ->
             % There is no response defined for this function (see also SGP.22, section 5.6.4), so we send just forward an
             % an empty tuple.
 	    {};
+	204 ->
+            % Some SMDP+ may also conclude the request, with status code 204 (No Content)
+	    {};
 	_ ->
 	    error
     end.
