@@ -104,13 +104,13 @@ init() ->
 	    ok
     end,
 
-    % Look through the rest table and mark all items that were in state "work" as "aborted". This way we tell the REST
-    % API user that the processing of the order was interrupted. The API user is then expected to delete the item and
-    % re-submit the order.
+    % Look through the rest table and mark all items that were in state "work" as "done" and put an appropriate outcome
+    % into the rest table. This way we tell the REST API user that the processing of the order was interrupted due to a
+    % crash/restart of the eIM. The API user is then expected to delete the item and (if necessary) re-submit the order.
     Trans = fun() ->
 		    Q = qlc:q([X#rest.resourceId || X <- mnesia:table(rest), X#rest.status == work]),
 		    ResourceIds = qlc:e(Q),
-		    lists:foreach(fun(ResourceId) -> trans_rest_set_status(ResourceId, aborted, none, none) end, ResourceIds)
+		    lists:foreach(fun(ResourceId) -> trans_rest_set_status(ResourceId, done, [{[{procedureError, aborted}]}], none) end, ResourceIds)
 	    end,
     {atomic, ok} = mnesia:transaction(Trans),
     ok.
