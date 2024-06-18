@@ -86,3 +86,25 @@ orders when done.
 * mnesia dir: configure the location of the mnesia database. The default setting will store the dabase in
   `./_rel/onomondo_eim_release/db`.
 
+### tyring out the REST API
+
+The REST API offered by onomondo-eim is a powerful interface to manage a fleet of eUICCs. The REST API lets the user
+create download orders and offers full access to all PSMOs and ECOs that are specified in SGP.32. Unfortunately this
+also means that the REST API is also a complex interface that is difficult to operate out of the box without any
+preior familiarization. To give a system integrator a good starting point the contrib directory contains "tryme-scripts"
+that serve as examples and an easy way try out the REST API right away.
+
+There is a tryme script to create downloads (tryme_download.sh) and one tryme script per PSMO/eCO. The scripts are
+called with a one letter parameter that refers to a profile that is pre-configured in tryme.cfg (see below). To get
+an overview which profiles are available/preconfigured, the tryme_*.sh script may be called without parameters.
+
+It should be noted that the tryme_*.sh scripts are really just simple examples that can not replace a proper eUICC
+management backend. A REST API user must keep track of the orders he submitted, monitor them, check for errors, delete
+orders, resubmit orders, etc.
+
+#### tryme.cfg
+
+This is just a simple shellscript that sets some initial variables. Some sample values are already present. However,
+in order to make it work with a random eUICC, one must set the EID at the top. In order to be able to create downloads
+one must also set the AC (ActivationCode) and if available the ICCID. In case the ICCID is not known it can be obtained
+from the result shown by tryme_download.sh.
