@@ -32,7 +32,7 @@
 trans_rest_set_status(ResourceId, Status, Outcome, Debuginfo) ->
     Q = qlc:q([X || X <- mnesia:table(rest), X#rest.resourceId == ResourceId]),
     Rows = qlc:e(Q),
-    Timestamp = uuid:get_v1_time(),
+    Timestamp = os:system_time(seconds),
     case Rows of
 	[Row | []] ->
 	    mnesia:write(Row#rest{status=Status, timestamp=Timestamp, outcome=Outcome, debuginfo=Debuginfo}),
@@ -119,7 +119,7 @@ init() ->
 rest_create(Facility, EidValue, Order) ->
     ok = euicc_create_if_not_exist(EidValue),
     ResourceId = uuid:uuid_to_string(uuid:get_v4_urandom()),
-    Timestamp = uuid:get_v1_time(),
+    Timestamp = os:system_time(seconds),
     Row = #rest{resourceId=ResourceId, facility=Facility, eidValue=EidValue, order=Order, status=new,
 		timestamp=Timestamp, outcome=[], debuginfo=none},
     Trans = fun() ->
