@@ -155,17 +155,31 @@ rest_lookup(ResourceId, Facility) ->
 
 % Delete REST resource (order)
 rest_delete(ResourceId, Facility) ->
-    Oid = {rest, ResourceId},
+    OidRest = {rest, ResourceId},
+    OidWork = {work, ResourceId},
     Trans = fun() ->
-		    Q = qlc:q([X#rest.resourceId ||
+		    QRest = qlc:q([X#rest.resourceId ||
 				  X <- mnesia:table(rest),
 				  X#rest.resourceId == ResourceId, X#rest.facility == Facility]),
-		    Present = qlc:e(Q),
-		    case Present of
+		    RestPresent = qlc:e(QRest),
+		    case RestPresent of
 			[] ->
 			    none;
 			_ ->
-			    mnesia:delete(Oid)
+			    mnesia:delete(OidRest),
+
+			    % There may be an orphaned work item now, which we must also remove. This will also kill
+			    % the order in case it is currently in progress.
+			    QWork = qlc:q([X#rest.resourceId ||
+					      X <- mnesia:table(rest),
+					      X#rest.resourceId == ResourceId, X#rest.facility == Facility]),
+			    WorkPresent = qlc:e(QWork),
+			    case WorkPresent of
+				[] ->
+				    ok;
+				_ ->
+				    mnesia:delete(OidWork)
+			    end
 		    end
 	    end,
     {atomic, Result} = mnesia:transaction(Trans),
