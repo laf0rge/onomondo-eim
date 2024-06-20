@@ -18,12 +18,12 @@
 % debugging
 -export([dump_rest/0, dump_work/0, dump_euicc/0]).
 
-% trigger recurring database cleanup (called automatically by timer from this module)
--export([cleanup/0]).
+% trigger recurring events (called automatically by timer from this module)
+-export([cleanup/0, euicc_setparam/0]).
 
 -record(rest, {resourceId :: binary(), facility :: atom(), eidValue :: binary(), order, status :: atom(), timestamp :: integer(), outcome, debuginfo :: binary()}).
 -record(work, {pid :: pid(), resourceId :: binary(), transactionId :: binary(), eidValue :: binary(), order, state}).
--record(euicc, {eidValue :: binary(), counterValue :: integer()}).
+-record(euicc, {eidValue :: binary(), counterValue :: integer(), consumerEuicc :: boolean()}).
 
 %TODO: We need some mechanism that looks through the work table from time to time and checks the timestemp (field not
 %yet created in work) to find stuck work items. We also might also need a similar mechanism for the rest table that
@@ -117,8 +117,9 @@ init() ->
 	    end,
     {atomic, ok} = mnesia:transaction(Trans),
 
-    % Start recurring database cleanup cycles
+    % Start recurring event cycles
     ok = cleanup(),
+    ok = euicc_setparam(),
 
     ok.
 
@@ -211,7 +212,7 @@ work_fetch(EidValue, Pid) ->
 
     Trans = fun() ->
 		    Q = qlc:q([X || X <- mnesia:table(rest),
-				    X#rest.eidValue == EidValue, X#rest.status == new]),
+				    X#rest.eidValue == EidValue, X#rest.status == new, X#rest.facility =/= euicc]),
 		    Rows = qlc:e(Q),
 		    case Rows of
 			[Row | _] ->
@@ -387,24 +388,27 @@ work_finish(Pid, Outcome, Debuginfo) ->
 	    error
 	end.
 
+trans_euicc_create_if_not_exist(EidValue) ->
+    {ok, CounterValue} = application:get_env(onomondo_eim, counter_value),
+    Row = #euicc{eidValue=EidValue, counterValue=CounterValue, consumerEuicc=false},
+    Q = qlc:q([X#euicc.eidValue || X <- mnesia:table(euicc), X#euicc.eidValue == EidValue]),
+    Present = qlc:e(Q),
+    case Present of
+	[] ->
+	    mnesia:write(Row);
+	_ ->
+	    present
+    end.
+
 % Create a new eUICC master data entry
 euicc_create_if_not_exist(EidValue) ->
-    {ok, CounterValue} = application:get_env(onomondo_eim, counter_value),
-    Row = #euicc{eidValue=EidValue, counterValue=CounterValue},
     Trans = fun() ->
-		    Q = qlc:q([X#euicc.eidValue || X <- mnesia:table(euicc), X#euicc.eidValue == EidValue]),
-		    Present = qlc:e(Q),
-		    case Present of
-			[] ->
-			    mnesia:write(Row);
-			_ ->
-			    present
-		    end
+		    trans_euicc_create_if_not_exist(EidValue)
 	    end,
     {atomic, Result} = mnesia:transaction(Trans),
     case Result of
         ok ->
-	    logger:notice("eUICC: creating new master data entry: eID=~p, counter=~p", [EidValue, CounterValue]),
+	    logger:notice("eUICC: creating new master data entry: eID=~p", [EidValue]),
 	    ok;
 	present ->
 	    ok;
@@ -574,6 +578,83 @@ cleanup() ->
 
     % Next cleanup in 10 secs.
     {ok, _} = timer:apply_after(10000, mnesia_db, cleanup, []),
+    ok.
+
+% Run scheduled eUICC procedures
+euicc_setparam() ->
+    % An eUICC procedure in the context of this module has nothing to do with any of the procedures specified in
+    % GSMA SGP.22 or SGP.32. In this module an eUICC procedure is a virtual procedure were parameters in the
+    % euicc table are set.
+    UpdateEuiccParam = fun(EidValue, Name, Value) ->
+			       Q = qlc:q([X || X <- mnesia:table(euicc), X#euicc.eidValue == EidValue]),
+			       Rows = qlc:e(Q),
+			       case Rows of
+				   [Row | []] ->
+				       case Name of
+					   <<"counterValue">> ->
+					       mnesia:write(Row#euicc{counterValue=Value});
+					   <<"consumerEuicc">> ->
+					       mnesia:write(Row#euicc{consumerEuicc=Value});
+					   _ ->
+					       error
+				       end;
+				   [] ->
+				       error;
+				   _ ->
+				       error
+			       end
+		       end,
+
+    HandleParam = fun(ResourceId, EidValue, Param) ->
+			  case Param of
+			      {[{Name, Value}]} ->
+				  case UpdateEuiccParam(EidValue, Name, Value) of
+				      ok ->
+					  trans_rest_set_status(ResourceId, done, [{[{finalResult, success}]}], none);
+				      _ ->
+					  trans_rest_set_status(ResourceId, done, [{[{procedureError, badParam}]}], none)
+				  end;
+			      _ ->
+				  trans_rest_set_status(ResourceId, done, [{[{procedureError, badParamFormat}]}], none)
+			  end
+		  end,
+
+    % Remove Resource from work table and set an appropriate status in the rest table
+    HandleResource = fun({ResourceId, EidValue, Order}) ->
+			     trans_euicc_create_if_not_exist(EidValue),
+			     case Order of
+				 {[{<<"euicc">>, ParameterList }]} ->
+				     [HandleParam(ResourceId, EidValue, Param) || Param <- ParameterList],
+				     ok;
+				 _ ->
+				     trans_rest_set_status(ResourceId, done, [{[{procedureError, badOrder}]}], none)
+			     end
+		     end,
+
+    % Find all rest resources that stall in status "work" and older than the specified timeout value
+    Trans = fun() ->
+		    Q = qlc:q([{X#rest.resourceId, X#rest.eidValue, X#rest.order} || X <- mnesia:table(rest), X#rest.status == new, X#rest.facility == euicc]),
+		    Rows = qlc:e(Q),
+		    case Rows of
+			[] ->
+			    ok;
+			Rows ->
+			    [HandleResource(Row) || Row <- Rows],
+			    ok
+		    end
+	    end,
+
+    {atomic, Result} = mnesia:transaction(Trans),
+    case Result of
+        ok ->
+	    ok;
+	_ ->
+	    logger:error("eUICC: euicc procedure failed, database error"),
+	    error
+    end,
+
+    % Next euicc procedure in 10 secs.
+    {ok, _} = timer:apply_after(10000, mnesia_db, euicc_setparam, []),
     ok.
 
 % Dump all currently pending rest items (for debugging, to be called from console)

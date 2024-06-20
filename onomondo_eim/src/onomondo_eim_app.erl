@@ -75,6 +75,11 @@ start(_Type, _Args) ->
                {"/eco/lookup/:resource_id", rest_handler, [eco, lookup]},
                {"/eco/delete/:resource_id", rest_handler, [eco, delete]},
                {"/eco/list/", rest_handler, [eco, list]},
+	       % EUICC
+               {"/euicc/create/", rest_handler, [euicc, create]},
+               {"/euicc/lookup/:resource_id", rest_handler, [euicc, lookup]},
+               {"/euicc/delete/:resource_id", rest_handler, [euicc, delete]},
+               {"/euicc/list/", rest_handler, [euicc, list]},
 	       % MISC
                {"/", rest_handler, [info]}
               ]}
