@@ -86,23 +86,25 @@ orders when done.
 * mnesia dir: configure the location of the mnesia database. The default setting will store the database in
   `./_rel/onomondo_eim_release/db`.
 
-### REST API
+
+REST API
+--------
 
 The REST API offered by onomondo-eim is a powerful interface to manage a fleet of eUICCs. The REST API lets the user
-create download orders and offers full access to all PSMOs and ECOs that are specified in SGP.32.
+trigger profile downloads and offers full access to all PSMOs and ECOs that are specified in SGP.32.
 
-#### Facilities
+### Facilities
 
 The REST API is devided up into so called "facilities". The facility identifier is the first path element of the HTTP URL. There are four facilities defined:
 
 * download: management of profile downloads
 * psmo: Profile State Management Operations
 * eco: Eim Configuration Operations
-* euicc: Eim local eUICC configuration Operations
+* euicc: eim-local eUICC configuration Operations
 
 example: http://127.0.0.1:8080/download/...
 
-#### Operations
+### Operations
 
 The REST API defines four different basic operations. The name of the operation is the second path element of the HTTP URL:
 
@@ -113,18 +115,34 @@ The REST API defines four different basic operations. The name of the operation 
 
 example: http://127.0.0.1:8080/download/create
 
-#### JSON interface
+### JSON interface
 
-The REST API receives JSON formatted data via HTTP POST requests and returns a JSON formatted response. Each request
-contains the eidValue and a so called "order". The eidValue identifies the eUICC and the order contains information
-that the eIM needs to fullfill a specific task (e.g. trigger a profile download).
+The REST API receives JSON formatted data via HTTP POST requests and returns a JSON formatted response.
+
+#### Creating orders
+
+Each request contains the eidValue and a so called "order". The eidValue identifies the eUICC and the order contains
+information that the eIM needs to fullfill a specific task (e.g. trigger a profile download).
 
 Example: { "eidValue" : "89882119900000000000000000000005", "order" : {"activationCode" : "1$testsmdpplus1.example.com$OPxLD-UVRuC-jysPI-YkOwT"}}'
 
-The response usually contains a copy of the order along with status information. The following fields are defined:
+#### Monitoring orders
+
+The REST-API user is expected to poll the rest resource from time to time to check on its status. The polling is done
+using the lookup operation:
+
+Example: http://127.0.0.1:8080/download/lookup/8a901bd9-f203-4eae-bcba-12dee32f4444
+
+The result will contain a status field along with some other information that allows the API user to monitor the
+progress and the outcome of the current order.
+
+The following fields are defined:
+
 * status: contains the processing status of an order. This field does not say anything about success or failure of an
   order. It just tells the status. When an order is new, the status will be "new". An order that is currently in
-  progress will report "work" as status. When the order is finished, the reported status will be "done"
+  progress will report "work" as status. When the order is finished, the reported status will be "done". In case of an
+  resource error (non existing resourceId) the status will be "absent". Contrary to all other fields, the status field
+  is a mandatory field that is always present.
 * timestamp: contain the timestamp of the last update. The timestamp may be used by the REST API user to get an idea
   how long orders take.
 * resource: The resource is a copy of the JSON object that was submitted when the order was created. It contains the
@@ -138,9 +156,42 @@ The response usually contains a copy of the order along with status information.
   engineer. It should also be noted that the structure of the contents of this field may changed without further
   notice.
 
-Example: {"status": "done", "timestamp": "1718881629", "resource": {"eidValue": "89086030202200000022000027485428", "order": {"download": {"activationCode": "1$rsp.truphone.com$QR-G-5C-1LS-1W1Z9P7"}}}, "outcome": [{"profileInstallationResult": {"finalResult": "successResult", "iccid": "984474680000730771F0"}}], "debuginfo": "83680264001370656E64696E674E6F74696669636174696F6E680264001970
+Example, normal response: {"status": "done", "timestamp": "1718881629", "resource": {"eidValue": "89086030202200000022000027485428", "order": {"download": {"activationCode": "1$rsp.truphone.com$QR-G-5C-1LS-1W1Z9P7"}}}, "outcome": [{"profileInstallationResult": {"finalResult": "successResult", "iccid": "984474680000730771F0"}}], "debuginfo": "83680264001370656E64696E674E6F74696669636174696F6E680264001970
 
-#### tyring out the REST API
+Example, invalid resourceId: {"status": "absent"}
+
+#### Deleting orders
+
+The REST API user is responsible to keep the rest table clean. When an order is done or has to be revoked the for
+some reason, the API user will use the delete operation to remove the order from the eIM rest table.
+
+Example: http://127.0.0.1:8080/download/delete/8a901bd9-f203-4eae-bcba-12dee32f4444
+
+The eIM will confirm the deletion of the order by responding with a status "deleted".
+
+Example: {"status":"deleted"}
+
+In case the API user fails to delete the order for some reason it will not stay in the database indefinetly. After
+some generous timeout, the eIM will automatically delete the order from the REST table. However, the intension behind
+this mechanism is to guard against database memory leaks and is not intended to be used as the general mechanism to
+get rid of old orders.
+
+#### Listing orders
+
+The REST API user has to keep track of his pending orders. However, there may be circumstances where the API user must
+recover his state. In this case it is possible to list out all resourceIds of all orders that are currently in the
+rest table of a certain facility.
+
+Example: http://127.0.0.1:8080/download/list
+
+The eIM will respond with a resource_id_list. The API user may then use this list to lookup the state of each order.
+Since the list only contains the resourceIds of the current facility the REST API user must repeat the process for
+all facilities.
+
+Example: {"resource_id_list": ["2100f52e-83e1-4fed-9d30-f309daf3391a","35074412-654b-4d7b-aec0-e159837b998f","9d6b14df-1875-4827-8236-916383972a19"]}
+
+
+### tyring out the REST API
 
 Unfortunately the REST API is also a complex interface that is difficult to operate out of the box without any
 prior familiarization. To give a system integrator a good starting point the contrib directory contains "tryme-scripts"
