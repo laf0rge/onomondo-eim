@@ -24,7 +24,7 @@ The build process is started using `make`. The overall process may take a while 
 downloading and compiling further erlang related dependencies. The build process can also be started with `make run`.
 This will start the application immediately after finishing the compilation.
 
-Once the application is running it will display a prompt. To exit the applicatin type `CTRL+G` and then `q`.
+Once the application is running it will display a prompt. To exit the application type `CTRL+G` and then `q`.
 
 
 Configuration
@@ -55,7 +55,7 @@ cases those parameters do not have to be modified.
 * rest_timeout_noshow: Configure timeout until an order/procedure must start.
 * rest_timeout_expired: Configure timeout until the REST API user must lookup/delete the order via the REST API
 
-#### timeout recomendations
+#### timeout behavior
 
 The three REST API related timeouts (rest_timeout_) serve the purpose that the underlying REST database of the REST
 API won't overflow over time in case REST API users fail to monitor their orders and most importantly delete their
@@ -83,20 +83,72 @@ orders when done.
 ### vm.args
 
 * See also: https://www.erlang.org/doc/man/erl.html
-* mnesia dir: configure the location of the mnesia database. The default setting will store the dabase in
+* mnesia dir: configure the location of the mnesia database. The default setting will store the database in
   `./_rel/onomondo_eim_release/db`.
 
-### tyring out the REST API
+### REST API
 
 The REST API offered by onomondo-eim is a powerful interface to manage a fleet of eUICCs. The REST API lets the user
-create download orders and offers full access to all PSMOs and ECOs that are specified in SGP.32. Unfortunately this
-also means that the REST API is also a complex interface that is difficult to operate out of the box without any
-preior familiarization. To give a system integrator a good starting point the contrib directory contains "tryme-scripts"
+create download orders and offers full access to all PSMOs and ECOs that are specified in SGP.32.
+
+#### Facilities
+
+The REST API is devided up into so called "facilities". The facility identifier is the first path element of the HTTP URL. There are four facilities defined:
+
+* download: management of profile downloads
+* psmo: Profile State Management Operations
+* eco: Eim Configuration Operations
+* euicc: Eim local eUICC configuration Operations
+
+example: http://127.0.0.1:8080/download/...
+
+#### Operations
+
+The REST API defines four different basic operations. The name of the operation is the second path element of the HTTP URL:
+
+* create: create a rest resource, returns resourceId
+* lookup: lookup a rest resource by its resourceId, returns JSON
+* delete: delete a rest resource by its resourceId, returns JSON
+* list: list all resource IDs available for the current facility, returns JSON.
+
+example: http://127.0.0.1:8080/download/create
+
+#### JSON interface
+
+The REST API receives JSON formatted data via HTTP POST requests and returns a JSON formatted response. Each request
+contains the eidValue and a so called "order". The eidValue identifies the eUICC and the order contains information
+that the eIM needs to fullfill a specific task (e.g. trigger a profile download).
+
+Example: { "eidValue" : "89882119900000000000000000000005", "order" : {"activationCode" : "1$testsmdpplus1.example.com$OPxLD-UVRuC-jysPI-YkOwT"}}'
+
+The response usually contains a copy of the order along with status information. The following fields are defined:
+* status: contains the processing status of an order. This field does not say anything about success or failure of an
+  order. It just tells the status. When an order is new, the status will be "new". An order that is currently in
+  progress will report "work" as status. When the order is finished, the reported status will be "done"
+* timestamp: contain the timestamp of the last update. The timestamp may be used by the REST API user to get an idea
+  how long orders take.
+* resource: The resource is a copy of the JSON object that was submitted when the order was created. It contains the
+  eidValue and the order. It is included in the data so that the REST API user does not have to memorize it.
+* outcome: The outcome depends on the facility and on specific order. Its purpose is to inform the REST API user of
+  the order results. The outcome is modeled as a list since an outcome may contain more then one result. This is in
+  particular true for eUICC packages with more than one PSMO or eCO. The outcome is also used to convey error codes
+  back to the API user in case there were problems during the execution of the order.
+* debuginfo: The debug info contains the last ESipa message that was received from the IPAd in erlang ETF format.
+  During normal operation the field has no relevance. Its only purpose is to provide debug information to a software
+  engineer. It should also be noted that the structure of the contents of this field may changed without further
+  notice.
+
+Example: {"status": "done", "timestamp": "1718881629", "resource": {"eidValue": "89086030202200000022000027485428", "order": {"download": {"activationCode": "1$rsp.truphone.com$QR-G-5C-1LS-1W1Z9P7"}}}, "outcome": [{"profileInstallationResult": {"finalResult": "successResult", "iccid": "984474680000730771F0"}}], "debuginfo": "83680264001370656E64696E674E6F74696669636174696F6E680264001970
+
+#### tyring out the REST API
+
+Unfortunately the REST API is also a complex interface that is difficult to operate out of the box without any
+prior familiarization. To give a system integrator a good starting point the contrib directory contains "tryme-scripts"
 that serve as examples and an easy way try out the REST API right away.
 
 There is a tryme script to create downloads (tryme_download.sh) and one tryme script per PSMO/eCO. The scripts are
 called with a one letter parameter that refers to a profile that is pre-configured in tryme.cfg (see below). To get
-an overview which profiles are available/preconfigured, the tryme_*.sh script may be called without parameters.
+an overview which profiles are available/p reconfigured, the tryme_*.sh script may be called without parameters.
 
 It should be noted that the tryme_*.sh scripts are really just simple examples that can not replace a proper eUICC
 management backend. A REST API user must keep track of the orders he submitted, monitor them, check for errors, delete
