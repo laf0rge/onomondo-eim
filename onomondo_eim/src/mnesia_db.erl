@@ -174,7 +174,7 @@ rest_delete(ResourceId, Facility) ->
 			[] ->
 			    none;
 			_ ->
-			    mnesia:delete(OidRest),
+			    ok = mnesia:delete(OidRest),
 
 			    % There may be an orphaned work item now, which we must also remove. This will also kill
 			    % the order in case it is currently in progress.
@@ -260,8 +260,7 @@ work_bind(Pid, TransactionId) ->
 				Rows = qlc:e(Q),
 				case Rows of
 				    [Row | _] ->
-					mnesia:write(Row#work{transactionId=TransactionId}),
-					ok;
+					mnesia:write(Row#work{transactionId=TransactionId});
 				    [] ->
 					none;
 				    _ ->
@@ -277,8 +276,7 @@ work_bind(Pid, TransactionId) ->
 			     Rows = qlc:e(Q),
 			     case Rows of
 				 [Row | _] ->
-				     mnesia:write(Row#work{pid=Pid}),
-				     ok;
+				     mnesia:write(Row#work{pid=Pid});
 				 [] ->
 				     none;
 				 _ ->
@@ -343,8 +341,7 @@ work_update(Pid, State) ->
 		    Rows = qlc:e(Q),
 		    case Rows of
 			[Row | _] ->
-			    mnesia:write(Row#work{state=State}),
-			    ok;
+			    mnesia:write(Row#work{state=State});
 			[] ->
 			    error;
 			_ ->
@@ -425,7 +422,7 @@ euicc_counter_tick(EidValue) ->
 		    case Rows of
 			[Row | _] ->
 			    CounterValue = Row#euicc.counterValue + 1,
-			    mnesia:write(Row#euicc{counterValue=CounterValue}),
+			    ok = mnesia:write(Row#euicc{counterValue=CounterValue}),
 			    {ok, CounterValue};
 			[] ->
 			    error;
@@ -479,7 +476,7 @@ mark_stuck(Timeout) ->
     HandleResource = fun(ResourceId) ->
 			     io:format("=>~p~n", [ResourceId]),
 			     Oid = {work, ResourceId},
-			     mnesia:delete(Oid),
+			     ok = mnesia:delete(Oid),
 			     trans_rest_set_status(ResourceId, done, [{[{procedureError, stuckOrder}]}], none)
 		     end,
 
@@ -540,7 +537,7 @@ delete_expired(Timeout) ->
     HandleResource = fun(ResourceId) ->
 			     io:format("=>~p~n", [ResourceId]),
 			     Oid = {rest, ResourceId},
-			     mnesia:delete(Oid)
+			     ok = mnesia:delete(Oid)
 		     end,
 
     % Find all rest resources that linger in the rest table for a long time and are not in the status "new"
