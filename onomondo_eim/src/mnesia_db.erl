@@ -113,7 +113,7 @@ init() ->
     Trans = fun() ->
 		    Q = qlc:q([X#rest.resourceId || X <- mnesia:table(rest), X#rest.status == work]),
 		    ResourceIds = qlc:e(Q),
-		    lists:foreach(fun(ResourceId) -> trans_rest_set_status(ResourceId, done, [{[{procedureError, aborted}]}], none) end, ResourceIds)
+		    lists:foreach(fun(ResourceId) -> trans_rest_set_status(ResourceId, done, [{[{procedureError, abortedOrder}]}], none) end, ResourceIds)
 	    end,
     {atomic, ok} = mnesia:transaction(Trans),
 
@@ -480,7 +480,7 @@ mark_stuck(Timeout) ->
 			     io:format("=>~p~n", [ResourceId]),
 			     Oid = {work, ResourceId},
 			     mnesia:delete(Oid),
-			     trans_rest_set_status(ResourceId, done, [{[{procedureError, stuck}]}], none)
+			     trans_rest_set_status(ResourceId, done, [{[{procedureError, stuckOrder}]}], none)
 		     end,
 
     % Find all rest resources that stall in status "work" and older than the specified timeout value
@@ -509,7 +509,7 @@ mark_noshow(Timeout) ->
     % Remove Resource from work table and set an appropriate status in the rest table
     HandleResource = fun(ResourceId) ->
 			     io:format("=>~p~n", [ResourceId]),
-			     trans_rest_set_status(ResourceId, done, [{[{procedureError, noshow}]}], none)
+			     trans_rest_set_status(ResourceId, done, [{[{procedureError, noshowOrder}]}], none)
 		     end,
 
     % Find all rest resources that stall in status "work" and older than the specified timeout value
@@ -611,12 +611,12 @@ euicc_setparam() ->
 			      {[{Name, Value}]} ->
 				  case UpdateEuiccParam(EidValue, Name, Value) of
 				      ok ->
-					  trans_rest_set_status(ResourceId, done, [{[{finalResult, success}]}], none);
+					  trans_rest_set_status(ResourceId, done, [{[{euiccUpdateResult, ok}]}], none);
 				      _ ->
-					  trans_rest_set_status(ResourceId, done, [{[{procedureError, badParam}]}], none)
+					  trans_rest_set_status(ResourceId, done, [{[{euiccUpdateResult, badParam}]}], none)
 				  end;
 			      _ ->
-				  trans_rest_set_status(ResourceId, done, [{[{procedureError, badParamFormat}]}], none)
+				  trans_rest_set_status(ResourceId, done, [{[{euiccUpdateResult, badParamFormat}]}], none)
 			  end
 		  end,
 

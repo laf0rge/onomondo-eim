@@ -273,10 +273,10 @@ result_to_json_listProfileInfoResult(ListProfileInfoResult) ->
     case ListProfileInfoResult of
 	{profileInfoListOk, ProfileInfoListOk} ->
 	    ProfileInfoList = [ProfileInfo2Json(O) || O <- ProfileInfoListOk],
-	    ListProfileInfoResultValue = {[{finalResult, ok}, {profileInfoList, ProfileInfoList}]},
+	    ListProfileInfoResultValue = {[{finalResult, successResult}, {profileInfoList, ProfileInfoList}]},
 	    {[{listProfileInfoResult, ListProfileInfoResultValue}]};
         _ ->
-	    {[{listProfileInfoResult, {[{finalResult, error}]}}]}
+	    {[{listProfileInfoResult, {[{finalResult, errorResult}]}}]}
     end.
 
 result_to_json_listEimResult(ListEimResult) ->
@@ -291,10 +291,10 @@ result_to_json_listEimResult(ListEimResult) ->
     case ListEimResult of
 	{eimIdList, EimIdList} ->
 	    EimIdInfoList = [EimIdList2Json(O) || O <- EimIdList],
-	    ListEimResultValue = {[{finalResult, ok}, {eimIdList, EimIdInfoList}]},
+	    ListEimResultValue = {[{finalResult, successResult}, {eimIdList, EimIdInfoList}]},
 	    {[{listEimResult, ListEimResultValue}]};
         _ ->
-	    {[{listEimResult, {[{finalResult, error}]}}]}
+	    {[{listEimResult, {[{finalResult, errorResult}]}}]}
     end.
 
 result_to_json_addEimResult(AddEimResult) ->
@@ -391,5 +391,5 @@ cancelSessionResponse_to_outcome(CancelSessionResponse) ->
 	{cancelSessionResponseOk, _} ->
 	    [{[{cancelSessionResult, ok}]}];
 	_ ->
-	    [{[{cancelSessionResult, error}]}]
+	    [{[{cancelSessionResult, undefinedError}]}]
     end.
