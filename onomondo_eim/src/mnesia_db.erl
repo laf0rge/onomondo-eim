@@ -474,8 +474,18 @@ mark_stuck(Timeout) ->
 
     % Remove Resource from work table and set an appropriate status in the rest table
     HandleResource = fun(ResourceId) ->
-			     Oid = {work, ResourceId},
-			     ok = mnesia:delete(Oid),
+			     % find the pid of the work item that is stuck and then delete it
+			     Q = qlc:q([X#work.pid || X <- mnesia:table(work), X#work.resourceId == ResourceId]),
+			     WorkPresent = qlc:e(Q),
+			     case WorkPresent of
+				 [Pid] ->
+				     Oid = {work, Pid},
+				     ok = mnesia:delete(Oid);
+				 _ ->
+				     ok
+			     end,
+
+			     % set status in the rest table
 			     trans_rest_set_status(ResourceId, done, [{[{procedureError, stuckOrder}]}], none)
 		     end,
 
