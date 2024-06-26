@@ -114,7 +114,7 @@ get_rest_list(Req, State, Facility) ->
     logger:notice("REST: client requests REST resource list: Facility=~p", [Facility]),
     Result = mnesia_db:rest_list(Facility),
     ResourceIdList = [ list_to_binary(X) || X <- Result],
-    Response = io_lib:format("{\"resource_id_list\": ~s}",
+    Response = io_lib:format("{\"resourceIdList\": ~s}",
 			     [binary_to_list(jiffy:encode(ResourceIdList))]),
     logger:notice("REST: responding to client: Response:~p", [list_to_binary(Response)]),
     {list_to_binary(Response), Req, State}.
