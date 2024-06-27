@@ -1,5 +1,27 @@
 ﻿# onomondo-eim
-Remote provisioning and management of the eUICC in IoT Devices as defined in eSIM IoT Architecture and Requirements SGP.31.
+onomondo-eim is an erlang based eIM (Remote provisioning and management of the eUICC in IoT Devices, see also SGP.31)
+implementation. Besides an ES9+ (SMDP+) and an ESipa (IPAd) interface it also features a REST API that allows an API
+user to perform management tasks on the eUICC (profile download, execution of PSMOs and eCOs).
+
+Interfaces
+----------
+
+### ESipa
+
+The ESipa interface of onomondo-eim is implemented as an HTTP server interface (see also GSMA SGP.32, section 6.1) that
+uses ASN.1 function bindings (see also GSMA SGP.32, section 6.3. The HTTP client (`IPAd`) on the remote end is expected to
+establish the connection with the ESipa.GetEimPackage request and keep it open at least until the related procedure
+ends with the ESipa.HandleNotifiations request (see also GSMA SGP.32, section 3.1.1.1, figure 5)
+
+### ES9+
+
+The ES9+ interface of onomondo-eim is implemented as a HTTP client interface (see also GSMA SGP.22, section 5.6). that
+uses the JSON function bindings (see also GSMA SGP.22, section 6.5).
+
+### REST API
+
+The REST API is a custom interface that is used by the eIM operator to manage his fleet of eUICCs. It is implemented
+as a HTTP server and uses JSON formatted requests and responses. (see also section `REST API`)
 
 
 Getting Started
@@ -8,15 +30,18 @@ Getting Started
 ### Installing run time dependencies
 
 * Dependencies required to compile and run the onomondo_eim erlang application:
+```
   apt-get install erlang
   apt-get install curl
   apt-get install build-essential
+```
 
 * Dependencies required to compile and run the restop.py tool
+```
   apt-get install python3-full
   pip3 install erlang-py
   pip3 install requests
-
+```
 
 ### Building and Running
 
@@ -26,6 +51,9 @@ This will start the application immediately after finishing the compilation.
 
 Once the application is running it will display a prompt. To exit the application type `CTRL+G` and then `q`.
 
+(To run onomondo-eim under the control of `systemd`, the example service file /contrib/onomondo-eim.service may be
+used)
+
 
 Configuration
 -------------
@@ -33,19 +61,19 @@ Configuration
 The user relevant configuration files can be found in the `./config` directory. In the default configuration
 onomondo-eim will start with all services bound to local host. The most relevant configuration file is
 `sys.config`, which sets the application parameters. The file `vm.args` sets erlang VM parameters. In most
-cases those parameters do not have to be modified.
+cases, those parameters do not have to be modified.
 
 ### sys.config
 
-* `esipa_ip`: Configure on which network interface the ESipa interface should listen.
+* `esipa_ip`: Configure on which network interface where the ESipa interface should listen.
 * `esipa_port`: Configure the port number where the ESipa interface should listen.
 * `esipa_ssl_disable`: Set this to true to use HTTP instead of HTTPs. This is a debug feature intended for lab setups to
   simplify the creation of protocol traces.
 * `esipa_ssl_cert`: Configure the location of the SSL certificate.
 * `esipa_ssl_key`: Configure the location of the SSL private key.
-* `rest_ip`: Configure on which network interface the REST API interface should listen.
+* `rest_ip`: Configure on which network interface where the REST API interface should listen.
 * `rest_port`: Configure the port number where the REST API interface should listen.
-* `eim_id`: Configure the eimId of the eIM instance.
+* `eim_id`: Configure the `eimId` of the eIM instance.
 * `es9p_ssl_disable`: Set this to true to use HTTP instead of HTTPs. This is a debug feature intended for lab setups to
   simplify the creation of protocol traces.
 * `eim_cert`: Configure the location of the certificate that is used for verification of eUICC packages.
@@ -55,43 +83,43 @@ cases those parameters do not have to be modified.
 * `rest_timeout_noshow`: Configure timeout until an order/procedure must start.
 * `rest_timeout_expired`: Configure timeout until the REST API user must lookup/delete the order via the REST API
 
-#### timeout behavior
-
-The three REST API related timeouts (`rest_timeout_`) serve the purpose that the underlying REST database of the REST
-API won't overflow over time in case REST API users fail to monitor their orders and most importantly delete their
-orders when done.
-
-* The timeout `rest_timeout_stuck` gurds against stuck orders. Orders may get stuck due to communication errors between
-  SMDP+ or IPAd. When a procedure is stuck for too long it gets marked as done and an appropriate error code is
-  communicated to the REST API user. Since the overall time a procedure usually won't take more than a few minutes
-  (usually below one minute) 300 sec. would be a good compromise here.
-
-* The timeout `rest_timeout_noshow` guards against IPAd/eUICCs that fail to show up. When an order is placed the IPAd
-  is expected to poll the eIM within a reasonable amount of time. When the IPAd fails to poll for some reason the
-  order gets marked as done and an appropriate error code is communicated to the REST API user. Usually the polling
-  is triggered through some side channel or the polling happens regularly. Depending on the situation the timeout may
-  be set to several hours or even days. In any case it should not be lower than `rest_timeout_stuck` for obvious
-  reasons. A recommended timeout value would be 1800 (30 min).
-
-* The timeout `rest_timeout_expired` guards against careless REST API users. As mentioned already, the REST API user is
-  expected to carefully monitor his orders and delete them on his own responsibility. However, it may be that a REST
-  API user fails to monitor an order he created. To prevent the database from gradually overflowing such orders will
-  be expired. This means they are deleted silently. Depending on the situation and the quality of the tooling that
-  operates the REST API, this timeout can be set generously (hours, days or even weeks). In any case the timeout should
-  not be set lower than `rest_timeout_noshow` for obvious reasons. A recommended timeout value would be 86400 (24h)
-
 ### vm.args
 
 * See also: https://www.erlang.org/doc/man/erl.html
 * mnesia dir: configure the location of the mnesia database. The default setting will store the database in
   `./_rel/onomondo_eim_release/db`.
 
+#### Timeout Behavior
+
+The three REST API related timeouts (`rest_timeout_`) serve the purpose that the underlying REST database of the REST
+API won't overflow over time in case REST API users fail to monitor their orders and most importantly, delete their
+orders when done.
+
+* The timeout `rest_timeout_stuck` gurds against stuck orders. Orders may get stuck due to communication errors between
+  SMDP+ or IPAd. When a procedure is stuck for too long it gets marked as done and an appropriate error code is
+  communicated to the REST API user. Since a procedure usually won't take more than a few minutes (usually below one
+  minute) 300 sec. would be a good compromise here.
+
+* The timeout `rest_timeout_noshow` guards against IPAd/eUICCs that fail to show up. When an order is placed the IPAd
+  is expected to poll the eIM within a reasonable amount of time. When the IPAd fails to poll for some reason, the
+  order gets marked as done and an appropriate error code is communicated to the REST API user. Usually the polling
+  is triggered through some side channel or the polling happens periodically. Depending on the situation the timeout may
+  be set to several hours or even days. In any case it should not be lower than `rest_timeout_stuck` for obvious
+  reasons. A recommended timeout value would be 1800 (30 min).
+
+* The timeout `rest_timeout_expired` guards against careless REST API users. As mentioned already, the REST API user is
+  expected to carefully monitor his orders and delete them on his own responsibility. However, it may be that a REST
+  API user fails to monitor an order he created. To prevent the database from gradually overflowing, such orders will
+  be expired. This means they are deleted silently. Depending on the situation and the quality of the tooling that
+  operates the REST API, this timeout can be set generously (hours, days or even weeks). In any case, the timeout should
+  not be set lower than `rest_timeout_noshow` for obvious reasons. A recommended timeout value would be 86400 (24h)
+
 
 REST API
 --------
 
 The REST API offered by onomondo-eim is a powerful interface to manage a fleet of eUICCs. The REST API lets the user
-trigger profile downloads and offers full access to all PSMOs and ECOs that are specified in SGP.32.
+trigger profile downloads and offers full access to all PSMOs and ECOs that are specified in GSMA SGP.32.
 
 ### Facilities
 
@@ -99,8 +127,8 @@ The REST API is divided up into so called `facilities`. The `facility` identifie
 URL. There are four facilities defined:
 
 * `download`: management of profile downloads
-* `psmo`: Profile State Management Operations
-* `eco`: Eim Configuration Operations
+* `psmo`: Profile State Management Operations (PSMO)
+* `eco`: Eim Configuration Operations (eCO)
 * `euicc`: eim-local eUICC configuration Operations
 
 The purpose of the `facilities` is to provide separation at URL level. This allows for easier filtering to restrict
@@ -115,9 +143,14 @@ The REST API defines four different basic operations. The name of the operation 
 * `delete`: delete a rest resource by its resourceId, returns JSON
 * `list`: list all resource IDs available for the current facility, returns JSON.
 
-Example: URL with selected facility "download" and operation "create"
+### ResourceId
+
+When a REST resource is created, a so called 'resourceId' is returned by the REST API. The resourceId uniquely
+identifies the REST resource and has to be memorized by the REST API user to perform further operations.
+
+Example: URL with selected facility "download" and operation "lookup" on the resourceId "8a901bd9-f203-4eae-bcba-12dee32f4444"
 ```
-http://127.0.0.1:8080/download/create
+http://127.0.0.1:8080/download/lookup/8a901bd9-f203-4eae-bcba-12dee32f4444
 ```
 
 ### Interface
@@ -125,18 +158,18 @@ http://127.0.0.1:8080/download/create
 The REST API receives JSON formatted data via HTTP POST requests and returns a JSON formatted response. The following
 chapter describes how the REST interface works in general.
 
-#### Creating orders
+#### Creating Orders
 
 Each request contains a so called `resource`. The resource is a JSON formatted request that contains the `eidValue` and
-a so called `order`. The `eidValue` identifies the eUICC and the `order` contains information that the eIM needs to
-fulfill a specific task (e.g. trigger a profile download).
+a so called `order`. The `eidValue` identifies the eUICC and the `order` contains specific parameters that the eIM needs
+to fulfill a specific task (e.g. trigger a profile download).
 
 Example: Rest resource that orders to trigger a profile download
 ```
 { "eidValue" : "89882119900000000000000000000005", "order" : {"activationCode" : "1$rsp.example.com$EXAMPLE"}}'
 ```
 
-#### Monitoring orders
+#### Monitoring Orders
 
 The REST-API user is expected to poll the rest resource from time to time to check on its `status`. The polling is done
 using the lookup operation:
@@ -147,17 +180,18 @@ http://127.0.0.1:8080/download/lookup/8a901bd9-f203-4eae-bcba-12dee32f4444
 ```
 
 The result will contain a `status` field along with some other information that allows the REST API user to monitor the
-progress and the outcome of the current `order`.
+progress and the `outcome` of the current `order`.
 
 The following fields are defined:
 
 * `status`: contains the processing status of an `order`. This field does not say anything about success or failure of
-  an `order`. It just tells the processing `status`. When an `order` is new, the status will be `new`. An order that
-  is currently in progress will report `work` as `status`. When the `order` is finished, the reported status will be
-  `done`. In case of an resource error (non existing `resourceId`) the status will be `absent`. Contrary to all other
-  fields, the `status` field is a mandatory field that is always present.
-* `timestamp`: contains the `timestamp` of the last update. The `timestamp` may be used by the REST API user to get an
-  idea how long `orders` take.
+  an `order`. It just tells the processing `status`. When an `order` is new, the status will be `new`. An `order` that
+  is currently in progress will report `work` as `status`. When the `order` is finished, the reported `status` will be
+  `done`. In case of an REST resource error (non existing `resourceId`) the status will be `absent`. A REST resource
+  that has just been deleted will report `deleted` to confirm its deletion. Contrary to all other fields, the `status`
+  field is a mandatory field that is always present.
+* `timestamp`: contains the `timestamp` of the last update. The `timestamp` may be used by the REST API user to
+  determine how long `orders` take.
 * `resource`: The `resource` is a copy of the JSON object that was submitted when the REST resource was created. It
   contains the `eidValue` and the `order`. It is included in the data so that the REST API user does not have to
   memorize it.
@@ -175,54 +209,54 @@ Example: A typical `lookup` response after a successful profile install:
 {"status": "done", "timestamp": "1718881629", "resource": {"eidValue": "89086030202200000022000027485428", "order": {"download": {"activationCode": "1$rsp.example.com$EXAMPLE"}}}, "outcome": [{"profileInstallationResult": {"finalResult": "successResult", "iccid": "984474680000730771F0"}}], "debuginfo": "83680264001370656E64696E674E6F74696669636174696F6E680264001970
 ```
 
-Example: A typical `lookup` response when an invalid resourceId is used:
+Example: A typical `lookup` response when an invalid `resourceId` is used:
 ```
 {"status": "absent"}
 ```
 
-#### Deleting orders
+#### Deleting REST resources
 
-The REST API user is responsible to keep the rest table clean. When an order is done or has to be revoked for
-some reason, the API user will use the delete operation to remove the order from the eIM rest table.
+The REST API user is responsible to keep the `rest` table clean. When an `order` is done or has to be revoked for some
+reason, the REST API user will use the `delete` operation to remove the related REST resource from the `rest` table.
 
 Example: URL to `delete` a specific REST resource
 ```
 http://127.0.0.1:8080/download/delete/8a901bd9-f203-4eae-bcba-12dee32f4444
 ```
 
-The eIM will confirm the deletion of the `order` by responding with a status `deleted`.
+The eIM will confirm the deletion of the REST resource by responding with a status `deleted`.
 
 Example: A typical delete response
 ```
 {"status":"deleted"}
 ```
 
-In case the API user fails to delete the `order` for some reason, the `order` it will not stay in the database
-indefinitely. After some generous timeout, the eIM will automatically delete the `order` from the REST table. However,
-the intension behind this mechanism is to guard against database memory leaks and is not intended to be used as the
-general mechanism to get rid of old orders.
+In case the API user forgets to delete the REST resource for some reason, the REST resource it will not stay in the
+database indefinitely. After some generous timeout, the eIM will automatically delete the REST resource from the REST
+table. However, the intension behind this mechanism is to guard against database memory leaks and is not intended to be
+used as the general mechanism to get rid of REST resources that are no longer used.
 
-#### Listing orders
+#### Listing REST resources
 
-The REST API user has to keep track of his pending orders. However, there may be circumstances where the API user must
-recover his state. In this case it is possible to list all `resourceIds` of all `orders` that are currently in the
-`rest` table.
+The REST API user has to keep track of his REST resources. However, there may be circumstances where the REST API user
+must recover his state. In this case it is possible to list all `resourceIds` of all REST resources that are currently
+in the `rest` table.
 
 Example: URL to list all REST resources available in the `download` `facility`
 ```
 http://127.0.0.1:8080/download/list
 ```
 
-The eIM will respond with a `resourceIdList`. The API user may then use this list to lookup the state of each order.
-Since the list only contains the `resourceIds` of the current `facility`, the REST API user must repeat the process for
-all `facilities`.
+The eIM will respond with a `resourceIdList`. The REST API user may then use this list to lookup the state of each
+REST resource. Since the list only contains the `resourceIds` of the current `facility`, the REST API user must repeat
+the process for all `facilities`.
 
 Example: A typical `list` response with three `resourceIDs`
 ```
 {"resourceIdList": ["2100f52e-83e1-4fed-9d30-f309daf3391a","35074412-654b-4d7b-aec0-e159837b998f","9d6b14df-1875-4827-8236-916383972a19"]}
 ```
 
-#### JSON schema
+#### JSON Schema
 
 This description above describes only the basic concept of the REST API. To give a system integrator a detailed overview
 on how the requests/responses should look like two JSON schema files are shipped with onomondo-eim:
@@ -234,7 +268,7 @@ to the REST API should have.
 REST API when the `lookup` operation is performed.
 
 
-### tyring out the REST API
+### Tyring Out The REST API
 
 The REST API is complex interface that is difficult to operate out of the box without any prior familiarization. To
 give a system integrator a good starting point the contrib directory contains "tryme-scripts" that serve as examples
@@ -242,11 +276,18 @@ and an easy way try out the REST API right away.
 
 There is a tryme script to `create` downloads (tryme_download.sh) and one tryme script per PSMO/eCO. The scripts are
 called with a one letter parameter that refers to a profile that is pre-configured in tryme.cfg (see below). To get
-an overview which profiles are available/preconfigured, the tryme_*.sh script may be called without parameters.
+an overview which profiles are available/preconfigured, a "tryme_*.sh" script may be called without parameters.
 
-It should be noted that the tryme_*.sh scripts are really just simple examples that can not replace a proper eUICC
-management backend. A REST API user must keep track of the orders he submitted, monitor them, check for errors, delete
-orders, resubmit orders, etc.
+It should be noted that the tryme_*.sh scripts are really just simple examples that were created to simplify testing
+during development.
+
+#### restop.py
+
+The python-script "restop.py" is called by the tryme "tryme_*.sh" scripts. This script can be used as a stand-alone
+tool to operate the REST API. The intended usecase of "restop.py" is to offer an easy access to the REST API for
+testing and development. It should be noted that this tool can not replace a proper eUICC management backend. A REST API
+user must keep track of the REST resources he created, monitor them, check for errors, delete REST resources, resubmit
+REST resources in case an `order` has failed, etc.
 
 #### tryme.cfg
 
@@ -262,7 +303,7 @@ the end).
 In tryme.cfg one will also find a profile 'X', this profile is a placeholder in case the user decides not to edit
 tryme.cfg and to pass all parameters from the commandline instead.
 
-#### downloading and enabling a profile
+#### Downloading And Enabling A Profile
 
 In the following we will discuss how a profile download is triggered and how the results should look like. In the
 following example we will pass all parameters directly from the commandline. It is assumed that the REST API of
@@ -309,13 +350,13 @@ PSMO. When the status reaches `done`, we should see the following JSON output:
 The enableResult in the outcome shows `ok`. This means that everything went well and the profile is now enabled.
 
 
-database
+Database
 --------
 
 To keep state, onomondo-eim uses an mnesia database. The database files are automatically created on the first startup.
 The database contains three tables. `rest`, `work` and `euicc`.
 
-### rest table
+### rest Table
 
 In this table the rest resources are stored along with their status information. This is also the table that the REST
 API user is maintaining the REST resources in. The column names are similar to the field names used on the REST API
@@ -356,7 +397,7 @@ Example: displaying the contents of the `rest` table on the erlang shell
        new,1719406847,[],none}]
 ```
 
-### work table
+### work Table
 
 The `status` in the `rest` table is changed from `new` to `work` as soon as the related procedure begins to execute.
 To maintain the state of the specific procedure the `work` table is used. The table is kept in RAM only, which means
@@ -397,7 +438,7 @@ Example: displaying the contents of the `work` table on the erlang shell
        #{smdpAddress => <<"smdpp.test.rsp.sysmocom.de">>}}]
 ```
 
-### euicc table
+### euicc Table
 
 The `euicc` table contains the eUICC master data. This is in particular the EID and other meta information that is
 required for the eIM to operate. The data in this table is usually automatically collected and updated by the eIM.
