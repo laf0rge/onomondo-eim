@@ -30,10 +30,6 @@
 		signPubKey :: binary(),
 		signAlgo :: binary()}).
 
-%TODO: We need some mechanism that looks through the work table from time to time and checks the timestemp (field not
-%yet created in work) to find stuck work items. We also might also need a similar mechanism for the rest table that
-%cleans up stale items.
-
 % Caution: The status (atom) must be either "new", "work", or "done"
 
 % helper function (to be called from a transaction) to set the status of an item in the rest table.
