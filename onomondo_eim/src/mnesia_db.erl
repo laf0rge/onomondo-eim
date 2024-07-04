@@ -211,11 +211,30 @@ rest_list(Facility) ->
 % Start working on an order by creating a an entry in the work table and marking it's status as "work". After calling
 % this it is the callers responsibility to handle the work item and call rest_finish_order when the work is done.
 work_fetch(EidValue, Pid) ->
+    % One process can only work on one work item at a time. The API user must call work_finish before the next work
+    % item can be processed. If there is already a pending work item under the given PID, forcefully finish this work
+    % item.
+    TransPidExists = fun() ->
+			     Q = qlc:q([X || X <- mnesia:table(work), X#work.pid == Pid]),
+			     WorkPresent = qlc:e(Q),
+			     case WorkPresent of
+				 [] ->
+				     false;
+				 _ ->
+				     true
+			     end
+		     end,
 
-    % TODO: Check whether the given PID already works on another item. This would be a forbidden state. One process
-    % can only work on one work item at a time. The API user must call work_finish before the next work item
-    % can be processed. (maybe it makes sense to finish stale work items with an error status automatically)
+    {atomic, PidExists} = mnesia:transaction(TransPidExists),
+    case PidExists of
+	true ->
+	    work_finish(Pid, [{[{procedureError, stuckOrder}]}], none);
+	false ->
+	    ok
+    end,
 
+    % Read the next pending REST resource from the rest table and create a related work item. The work item is then
+    % in progress.
     Trans = fun() ->
 		    Q = qlc:q([X || X <- mnesia:table(rest),
 				    X#rest.eidValue == EidValue, X#rest.status == new, X#rest.facility =/= euicc]),
