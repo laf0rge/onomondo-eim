@@ -151,7 +151,7 @@ verify_euiccPackageResultSigned(EuiccPackageResult, EimSignature, EidValue) ->
 		    MsgToBeVerfied = utils:join_binary_list([EuiccPackageResultDataSigned_enc, EimSignature]),
 		    verify_signature(MsgToBeVerfied, EuiccSignEPR, EidValue);
 		{euiccPackageErrorSigned, EuiccPackageErrorSigned} ->
-		    EuiccPackageErrorDataSigned = maps:get(euiccPackageResultDataSigned, EuiccPackageErrorSigned),
+		    EuiccPackageErrorDataSigned = maps:get(euiccPackageErrorDataSigned, EuiccPackageErrorSigned),
 		    EuiccSignEPE = maps:get(euiccSignEPR, EuiccPackageErrorSigned),
 		    {ok, EuiccPackageErrorDataSigned_enc} = 'SGP32Definitions':encode('EuiccPackageErrorDataSigned',
 										      EuiccPackageErrorDataSigned),
