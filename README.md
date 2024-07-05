@@ -116,12 +116,6 @@ cases, those parameters do not have to be modified.
 * `rest_timeout_noshow`: Configure timeout until an order/procedure must start.
 * `rest_timeout_expired`: Configure timeout until the REST API user must lookup/delete the order via the REST API
 
-### vm.args
-
-* See also: https://www.erlang.org/doc/man/erl.html
-* mnesia dir: configure the location of the mnesia database. The default setting will store the database in
-  `./_rel/onomondo_eim_release/db`.
-
 #### Timeout Behavior
 
 The three REST API related timeouts (`rest_timeout_`) serve the purpose that the underlying REST database of the REST
@@ -147,12 +141,17 @@ orders when done.
   operates the REST API, this timeout can be set generously (hours, days or even weeks). In any case, the timeout should
   not be set lower than `rest_timeout_noshow` for obvious reasons. A recommended timeout value would be 86400 (24h)
 
+### vm.args
+
+* See also: https://www.erlang.org/doc/man/erl.html
+* mnesia dir: configure the location of the mnesia database. The default setting will store the database in
+  `./_rel/onomondo_eim_release/db`.
 
 REST API
 --------
 
 The REST API offered by onomondo-eim is a powerful interface to manage a fleet of eUICCs. The REST API lets the user
-trigger profile downloads and offers full access to all PSMOs and ECOs that are specified in GSMA SGP.32.
+trigger profile downloads and offers full access to all PSMOs and eCOs that are specified in GSMA SGP.32.
 
 ### Facilities
 
@@ -178,10 +177,11 @@ The REST API defines four different basic operations. The name of the operation 
 
 ### ResourceId
 
-When a REST resource is created, a so called 'resourceId' is returned by the REST API. The resourceId uniquely
+When a REST resource is created, a so called `resourceId` is returned by the REST API. The resourceId uniquely
 identifies the REST resource and has to be memorized by the REST API user to perform further operations.
 
-Example: URL with selected facility "download" and operation "lookup" on the resourceId "8a901bd9-f203-4eae-bcba-12dee32f4444"
+Example: URL with selected facility `download` and operation `lookup` on the `resourceId`
+"8a901bd9-f203-4eae-bcba-12dee32f4444"
 ```
 http://127.0.0.1:8080/download/lookup/8a901bd9-f203-4eae-bcba-12dee32f4444
 ```
@@ -204,7 +204,7 @@ Example: Rest resource that orders to trigger a profile download
 
 #### Monitoring Orders
 
-The REST-API user is expected to poll the rest resource from time to time to check on its `status`. The polling is done
+The REST API user is expected to poll the rest resource from time to time to check on its `status`. The polling is done
 using the lookup operation:
 
 Example: URL to lookup a specific REST resource
@@ -239,7 +239,7 @@ The following fields are defined:
 
 Example: A typical `lookup` response after a successful profile install:
 ```
-{"status": "done", "timestamp": "1718881629", "resource": {"eidValue": "89086030202200000022000027485428", "order": {"download": {"activationCode": "1$rsp.example.com$EXAMPLE"}}}, "outcome": [{"profileInstallationResult": {"finalResult": "successResult", "iccid": "984474680000730771F0"}}], "debuginfo": "83680264001370656E64696E674E6F74696669636174696F6E680264001970
+{"status": "done", "timestamp": "1718881629", "resource": {"eidValue": "89086030202200000022000027485428", "order": {"download": {"activationCode": "1$rsp.example.com$EXAMPLE"}}}, "outcome": [{"profileInstallationResult": {"finalResult": "successResult", "iccid": "984474680000730771F0"}}], "debuginfo": "83680264001370656E64696E674E6F74696669636174696F6E680264001970..."}
 ```
 
 Example: A typical `lookup` response when an invalid `resourceId` is used:
@@ -418,7 +418,7 @@ The database contains three tables. `rest`, `work` and `euicc`.
 
 ### rest Table
 
-In this table the rest resources are stored along with their status information. This is also the table that the REST
+In this table the rest resources are stored along with their status information. This is also the table where the REST
 API user is maintaining the REST resources in. The column names are similar to the field names used on the REST API
 interface.
 
@@ -460,14 +460,14 @@ Example: displaying the contents of the `rest` table on the erlang shell
 ### work Table
 
 The `status` in the `rest` table is changed from `new` to `work` as soon as the related procedure begins to execute.
-To maintain the state of the specific procedure the `work` table is used. The table is kept in RAM only, which means
+To maintain the state of the specific procedure the `work` table is used. This table is kept in RAM only, which means
 that its contents are volatile. This is a performance optimization. The work state may be updated quite frquently
 and in case the eIM has to handle a lot of IPAd clients simultaniously it is better not to synchronize
 each state change to the disk. The state in the `work` table is also only valuable during the execution of the
-procedure, a restart of the eIM while a procedure is running forcefully terminate a procedure in any case.
+procedure and a restart of the eIM while a procedure is running forcefully will terminate a procedure anyway.
 
-The entries in the `work` table are always associated to a specific erlang process, which in particular is the
-child process the HTTP server creates when the connection is made. It is important that the HTTP client keeps
+The entries in the `work` table are always associated to a specific erlang process, which is in particular the
+child process that the HTTP server creates when the connection is made. It is important that the HTTP client keeps
 the connection open until the procedure has ended. This means that each request that is part of the current
 procedure must be done within the same connection. Otherwise the HTTP server will generate a new child process
 for each request and it will not be possible to match the request with an entry in the `work` table. However, in ESipa
