@@ -255,6 +255,31 @@ Example: A typical `list` response with three `resourceIDs`
 ```
 {"resourceIdList": ["2100f52e-83e1-4fed-9d30-f309daf3391a","35074412-654b-4d7b-aec0-e159837b998f","9d6b14df-1875-4827-8236-916383972a19"]}
 ```
+y
+#### eIM Information
+
+The REST API also features an info page which can be used by the REST API user to gain some basic information of the eIM
+that it is working with. The info page mainly reflects the eIM configuration applied in sys.config (see also section
+"Configuration").
+
+When an eIM is added to the eimConfiguration on the eUICC (either via ES10b:AddInitialEim or via addEim eCO) the data
+is required to be passed in its ASN.1 encoded form. To simplify the process onomondo-eim also presents the eIM
+configuration in two different ASN.1 encoded formats:
+
+* `addInitialEimRequest`: This data format can be passed directly to an eUICC via an ES10b APDU. It will create the eIM
+configuration on the eUICC so that the eUICC is associated with the current onomondo-eim instance. The eUICC will
+create an `associationToken` in response, which should be passed back to the eIM via the REST API on the `euicc`
+facility. However, on a virgin eUICC the `associationToken` will be 1, which is also the default onomondo-eim will use.
+(see also GSMA SGP.32, section 3.5.2.1)
+
+* `eimConfigurationData`: This data format has the same contents as `addInitialEimRequest`, but withut the envelope.
+This format is suitable to be used for adding the eIM to the eUICC remotely via an eCO. (see also GSMA SGP.32, section
+3.5.1.1)
+
+Example: URL that returns eIM information
+```
+http://127.0.0.1:8080/
+```
 
 #### JSON Schema
 
@@ -267,6 +292,8 @@ to the REST API should have.
 * contrib/rest_api_response_schema.json: This schema that describes the JSON formatted response that is received from the
 REST API when the `lookup` operation is performed.
 
+* contrib/rest_api_info_schema.json: This schema that describes the JSON formatted info page that is received when the
+REST API is called without any parameters.
 
 ### Tyring Out The REST API
 

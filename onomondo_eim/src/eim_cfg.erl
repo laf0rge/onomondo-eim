@@ -38,16 +38,17 @@ gen_eim_configuration_data(Style) ->
 			     associationToken => -1, %Optional: instruct the eUICC to calculate an association token
 			     eimPublicKeyData => {eimPublicKey, EimCert_SubjectPublicKeyInfo}}, % Mandatory
     EimConfigurationDataList = [EimConfigurationData],
-    GetEimConfigurationDataResponse = #{eimConfigurationDataList => EimConfigurationDataList},
+    AddInitialEimRequest =  #{eimConfigurationDataList => EimConfigurationDataList},
 
     Encoded = case Style of
-		 response ->
-		     % Formatted as GetEimConfigurationDataResponse
-		     {ok, Asn1Encoded} = 'SGP32Definitions':encode('GetEimConfigurationDataResponse', GetEimConfigurationDataResponse),
+		  request ->
+		      % Formatted as AddInitialEimRequest
+		      {ok, Asn1Encoded} = 'SGP32Definitions':encode('AddInitialEimRequest',
+								    AddInitialEimRequest),
 		     Asn1Encoded;
-		 single ->
-		     % Formatted as EimConfigurationData only
-		     {ok, Asn1Encoded} = 'SGP32Definitions':encode('EimConfigurationData', EimConfigurationData),
-		     Asn1Encoded
+		  single ->
+		      % Formatted as EimConfigurationData only
+		      {ok, Asn1Encoded} = 'SGP32Definitions':encode('EimConfigurationData', EimConfigurationData),
+		      Asn1Encoded
 	     end,
     utils:binary_to_hex(Encoded).
