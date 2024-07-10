@@ -29,7 +29,7 @@ process_euiccPackageResult(Req0, EuiccPackageResult, EsipaReq, TransactionId) ->
     CheckCounterValue = fun(Map) ->
 				{EidValue, _, _} = mnesia_db:work_pickup(maps:get(pid, Req0), TransactionId),
 				CounterValueIpad = maps:get(counterValue, Map),
-				{ok, CounterValueEim} = mnesia_db:euicc_counter_get(EidValue),
+				{ok, CounterValueEim} = mnesia_db:euicc_param_get(EidValue, counterValue),
 				case CounterValueIpad of
 				    CounterValueEim ->
 					ok;

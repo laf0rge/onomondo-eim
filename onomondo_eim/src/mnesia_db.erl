@@ -13,7 +13,7 @@
 -export([work_fetch/2, work_pickup/2, work_update/2, work_bind/2, work_finish/3]).
 
 % euicc functions, to be called by the eIM code (from inside)
--export([euicc_counter_tick/1, euicc_counter_get/1, euicc_param_get/2, euicc_param_set/3]).
+-export([euicc_counter_tick/1, euicc_param_get/2, euicc_param_set/3]).
 
 % debugging
 -export([dump_rest/0, dump_work/0, dump_euicc/0]).
@@ -478,31 +478,6 @@ euicc_counter_tick(EidValue) ->
 	    {ok, CounterValue};
 	_ ->
 	    logger:error("eUICC: cannot increment counterValue, database error: eID=~p", [EidValue]),
-	    error
-    end.
-
-% TODO: this function is obsoleted by euicc_param_get, remove it
-euicc_counter_get(EidValue) ->
-    Trans = fun() ->
-		    Q = qlc:q([X || X <- mnesia:table(euicc), X#euicc.eidValue == EidValue]),
-		    Rows = qlc:e(Q),
-		    case Rows of
-			[Row | _] ->
-			    {ok, Row#euicc.counterValue};
-			[] ->
-			    error;
-			_ ->
-			    error
-		    end
-	    end,
-
-    {atomic , Result} = mnesia:transaction(Trans),
-    case Result of
-        {ok, CounterValue} ->
-	    logger:notice("eUICC: reading current counterValue: eID=~p, counter=~p", [EidValue, CounterValue]),
-	    {ok, CounterValue};
-	_ ->
-	    logger:error("eUICC: cannot read current counterValue, database error: eID=~p", [EidValue]),
 	    error
     end.
 
