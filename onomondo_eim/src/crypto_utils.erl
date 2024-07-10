@@ -204,8 +204,8 @@ verify_cert(TrustedCert, VerifyCert) ->
 store_euicc_pubkey_from_authenticateResponseOk(AuthRespOk, EidValue) ->
     case mnesia_db:euicc_param_get(EidValue, signPubKey) of
 	{ok, <<>>} ->
-	% There is no public key stored yet for this eUICC, use the public
-	% key provided in the eUICC certificate
+	    % There is no public key stored yet for this eUICC, use the public
+	    % key provided in the eUICC certificate
 
 	    {ok, RootCiCertPath} = application:get_env(onomondo_eim, root_ci_cert),
 	    {ok, RootCiCertPem} = file:read_file(RootCiCertPath),
