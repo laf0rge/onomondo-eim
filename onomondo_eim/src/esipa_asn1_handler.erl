@@ -44,7 +44,7 @@ handle_asn1(Req0, _State, {initiateAuthenticationRequestEsipa, EsipaReq}) ->
 %GSMA SGP.32, section 6.3.2.2
 handle_asn1(Req0, _State, {authenticateClientRequestEsipa, EsipaReq}) ->
     TransactionId = maps:get(transactionId, EsipaReq),
-    {_, _, WorkState} = mnesia_db:work_pickup(maps:get(pid, Req0), TransactionId),
+    {EidValue, _, WorkState} = mnesia_db:work_pickup(maps:get(pid, Req0), TransactionId),
     BaseUrl = maps:get(smdpAddress, WorkState),
 
     % setup ES9+ request message
@@ -52,7 +52,6 @@ handle_asn1(Req0, _State, {authenticateClientRequestEsipa, EsipaReq}) ->
     Es9Req = case AuthServResp of
 		 {authenticateResponseOk, AuthRespOk} ->
 		     % drive-by store the eUICC public key so that we can use it later to sign PSMOs or eCOs
-		     EidValue = maps:get(eidValue, WorkState),
 		     crypto_utils:store_euicc_pubkey_from_authenticateResponseOk(AuthRespOk, EidValue),
 		     {authenticateClientRequest,
 		      #{transactionId => TransactionId,
@@ -217,7 +216,7 @@ handle_asn1(Req0, _State, {getEimPackageRequest, EsipaReq}) ->
     EsipaResp = case Work of
 		    {download, Order} ->
 			{[{<<"download">>, {[{<<"activationCode">>, ActivationCode}]}}]} = Order,
-			mnesia_db:work_update(maps:get(pid, Req0), #{eidValue => EidValue}),
+			mnesia_db:work_update(maps:get(pid, Req0), #{}),
 			{profileDownloadTriggerRequest, #{profileDownloadData => {activationCode, ActivationCode}}};
 		    {psmo, Order} ->
 			TransactionIdPsmo = rand:bytes(16),
@@ -228,8 +227,9 @@ handle_asn1(Req0, _State, {getEimPackageRequest, EsipaReq}) ->
 				ok = mnesia_db:work_finish(maps:get(pid, Req0), [{[{procedureError, badPsmo}]}], EsipaReq),
 				{eimPackageError, undefinedError};
 			    _ ->
-				EimSignature = crypto_utils:sign_euiccPackageSigned(EuiccPackageSigned, EidValue),
-				mnesia_db:work_update(maps:get(pid, Req0), #{eimSignature => EimSignature, eidValue => EidValue}),
+				EimSignature = crypto_utils:sign_euiccPackageSigned(EuiccPackageSigned,
+										    utils:binary_to_hex(EidValue)),
+				mnesia_db:work_update(maps:get(pid, Req0), #{eimSignature => EimSignature}),
 				{euiccPackageRequest,
 				 #{euiccPackageSigned => EuiccPackageSigned,
 				   eimSignature => EimSignature}}
@@ -243,8 +243,9 @@ handle_asn1(Req0, _State, {getEimPackageRequest, EsipaReq}) ->
 				ok = mnesia_db:work_finish(maps:get(pid, Req0), [{[{procedureError, badEco}]}], EsipaReq),
 				{eimPackageError, undefinedError};
 			    _ ->
-				EimSignature = crypto_utils:sign_euiccPackageSigned(EuiccPackageSigned, EidValue),
-				mnesia_db:work_update(maps:get(pid, Req0), #{eimSignature => EimSignature, eidValue => EidValue}),
+				EimSignature = crypto_utils:sign_euiccPackageSigned(EuiccPackageSigned,
+										    utils:binary_to_hex(EidValue)),
+				mnesia_db:work_update(maps:get(pid, Req0), #{eimSignature => EimSignature}),
 				{euiccPackageRequest,
 				 #{euiccPackageSigned => EuiccPackageSigned,
 				   eimSignature => EimSignature}}

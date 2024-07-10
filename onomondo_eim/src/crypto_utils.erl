@@ -27,7 +27,7 @@ plain_to_der(PlainSignature) ->
 
 sign_euiccPackageSigned(EuiccPackageSigned, EidValue) ->
     % Read the AssociationToken
-    {ok, AssociationToken} = mnesia_db:euicc_param_get(utils:binary_to_hex(EidValue), associationToken),
+    {ok, AssociationToken} = mnesia_db:euicc_param_get(EidValue, associationToken),
     AssociationTokenBinary = utils:integer_to_bytes(AssociationToken),
     AssociationTokenLength = utils:integer_to_bytes(byte_size(AssociationTokenBinary)),
     AssociationTokenBer =  utils:join_binary_list([<<132>>, AssociationTokenLength, AssociationTokenBinary]),
@@ -50,10 +50,10 @@ sign_euiccPackageSigned(EuiccPackageSigned, EidValue) ->
 verify_signature(Message, Signature, EidValue) ->
     DERSignature = plain_to_der(Signature),
 
-    {ok, SubjectPublicKeyHex} = mnesia_db:euicc_param_get(utils:binary_to_hex(EidValue), signPubKey),
+    {ok, SubjectPublicKeyHex} = mnesia_db:euicc_param_get(EidValue, signPubKey),
     SubjectPublicKey = utils:hex_to_binary(SubjectPublicKeyHex),
 
-    {ok, SignAlgo} = mnesia_db:euicc_param_get(utils:binary_to_hex(EidValue), signAlgo),
+    {ok, SignAlgo} = mnesia_db:euicc_param_get(EidValue, signAlgo),
     NamedCurve = case SignAlgo of
 		     <<"prime256v1">> ->
 			 {1,2,840,10045,3,1,7};
@@ -91,7 +91,7 @@ verify_signature(Message, Signature, EidValue) ->
 verify_experiment1() ->
     EuiccSigned1Hex = <<"3082011e8010aee5074869da4d8fa478124916ad54ed831974657374736d6470706c7573312e6578616d706c652e636f6d8410f6581fc7a6b99c28866b0ffcc41a31c9bf2281ac810302030182030205008303240215840d810100820400049ce8830222238505006b36d3c3860311020087030203008802029ca92c0414f54172bdf98a95d65cbeb88a38a1c11d800a85c30414c0bc70ba36929d43b467ff57570530e57ab8fcd8aa2c0414f54172bdf98a95d65cbeb88a38a1c11d800a85c30414c0bc70ba36929d43b467ff57570530e57ab8fcd804030100000c0f5359534d4f434f4d2d544553542d31af050403030301a02d80215453343856312d422d554e495155452d6e6f6a617661636172642d6e6f6373696da108800412345678a100">>,
     EuiccSignature1Hex = <<"5f9b24ba9e1b7c8647c22679e1f674d93c79b9c0ae05005c835b95664678b1351a9e1b59849da764acc6f70ae0061a85a8d73f063a78157405beac5e56aad2ec">>,
-    verify_signature(utils:hex_to_binary(EuiccSigned1Hex), utils:hex_to_binary(EuiccSignature1Hex), <<137,4,64,69,17,132,39,72,72,0,0,0,0,1,22,40>>).
+    verify_signature(utils:hex_to_binary(EuiccSigned1Hex), utils:hex_to_binary(EuiccSignature1Hex), <<89044045118427484800000000011628>>).
 
 % An experiment to prove that the verfication of signatures also works in the context of eUICC packages. Unfortunately
 % the spec is very vague about how the input data should be prepared. As of now none of the attempts here do work.
@@ -134,10 +134,10 @@ verify_experiment2() ->
 %    EimSignatureHex = <<"5F37408D5DE179B03A3FE13CD3A7E5A947FDDBB831ACC8F9AAFDC9777D314837CB0C805EE3029BF2445611C1580DC4470147DD6293ECA66987BC9A0A704CAB0031B223">>,
 
     MessageHex = <<EuiccPackageResultDataSignedHex/binary, EimSignatureHex/binary>>,
-    verify_signature(utils:hex_to_binary(MessageHex), utils:hex_to_binary(EuiccSignEPRHex), <<137,4,64,69,17,132,39,72,72,0,0,0,0,1,22,40>>).
+    verify_signature(utils:hex_to_binary(MessageHex), utils:hex_to_binary(EuiccSignEPRHex), <<89044045118427484800000000011628>>).
 
 verify_euiccPackageResultSigned(EuiccPackageResult, EimSignature, EidValue) ->
-    {ok, ConsumerEuicc} = mnesia_db:euicc_param_get(utils:binary_to_hex(EidValue), consumerEuicc),
+    {ok, ConsumerEuicc} = mnesia_db:euicc_param_get(EidValue, consumerEuicc),
     case ConsumerEuicc of
 	false ->
 	    case EuiccPackageResult of
@@ -202,7 +202,7 @@ verify_cert(TrustedCert, VerifyCert) ->
     end.
 
 store_euicc_pubkey_from_authenticateResponseOk(AuthRespOk, EidValue) ->
-    case mnesia_db:euicc_param_get(utils:binary_to_hex(EidValue), signPubKey) of
+    case mnesia_db:euicc_param_get(EidValue, signPubKey) of
 	{ok, <<>>} ->
 	% There is no public key stored yet for this eUICC, use the public
 	% key provided in the eUICC certificate
@@ -238,8 +238,8 @@ store_euicc_pubkey_from_authenticateResponseOk(AuthRespOk, EidValue) ->
 
 	    case Result of
 		ok ->
-		    ok = mnesia_db:euicc_param_set(utils:binary_to_hex(EidValue), signPubKey, utils:binary_to_hex(SignPubKey)),
-		    ok = mnesia_db:euicc_param_set(utils:binary_to_hex(EidValue), signAlgo, SignAlgo),
+		    ok = mnesia_db:euicc_param_set(EidValue, signPubKey, utils:binary_to_hex(SignPubKey)),
+		    ok = mnesia_db:euicc_param_set(EidValue, signAlgo, SignAlgo),
 		    ok;
 		_ ->
 		    error
