@@ -277,6 +277,9 @@ handle_asn1(Req0, _State, {provideEimPackageResult, EsipaReq}) ->
 	    EuiccPackageResult = maps:get(euiccPackageResult, EPRAndNotifications),
 	    ok = esipa_asn1_handler_utils:handle_euiccPackageResult(Req0, EuiccPackageResult, EsipaReq);
 	{ipaEuiccDataResponse, IpaEuiccDataResponse} ->
+	    % drive-by store the eUICC public key so that we can use it later to sign PSMOs or eCOs
+	    {EidValue, _, _} = mnesia_db:work_pickup(maps:get(pid, Req0), none),
+	    crypto_utils:store_euicc_pubkey_from_ipaEuiccDataResponse(IpaEuiccDataResponse, EidValue),
 	    Outcome = esipa_rest_utils:ipaEuiccDataResponse_to_outcome(IpaEuiccDataResponse),
 	    mnesia_db:work_finish(maps:get(pid, Req0), Outcome, EsipaReq);
 	{profileDownloadTriggerResult, _} ->

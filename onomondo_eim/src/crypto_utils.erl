@@ -5,7 +5,10 @@
 
 -module(crypto_utils).
 
--export([sign_euiccPackageSigned/2, verify_euiccPackageResultSigned/3, store_euicc_pubkey_from_authenticateResponseOk/2]).
+-export([sign_euiccPackageSigned/2,
+	 verify_euiccPackageResultSigned/3,
+	 store_euicc_pubkey_from_authenticateResponseOk/2,
+	 store_euicc_pubkey_from_ipaEuiccDataResponse/2]).
 
 %temporary, for debugging
 -export([der_to_plain/1, plain_to_der/1, verify_experiment1/0, verify_experiment2/0]).
@@ -262,6 +265,34 @@ store_euicc_pubkey_from_authenticateResponseOk(AuthRespOk, EidValue) ->
 	    EumCertificate =  maps:get(eumCertificate, AuthRespOk),
 	    EuiccCertificate = maps:get(euiccCertificate, AuthRespOk),
 	    store_euicc_pubkey(EumCertificate, EuiccCertificate, EidValue);
+	_ ->
+	    % There is already a public key stored for this eUICC
+	    ok
+    end.
+
+store_euicc_pubkey_from_ipaEuiccDataResponse(IpaEuiccDataResponse, EidValue) ->
+    case mnesia_db:euicc_param_get(EidValue, signPubKey) of
+	{ok, <<>>} ->
+	    % There is no public key stored yet for this eUICC, use the public
+	    % key provided in the eUICC certificate
+	    case IpaEuiccDataResponse of
+		{ipaEuiccData, IpaEuiccData} ->
+		    EumCertificatePresent = maps:is_key(eumCertificate, IpaEuiccData),
+		    EuiccCertificatePresent = maps:is_key(euiccCertificate, IpaEuiccData),
+		    if
+			EumCertificatePresent and EuiccCertificatePresent ->
+			    EumCertificate = maps:get(eumCertificate, IpaEuiccData),
+			    EuiccCertificate = maps:get(euiccCertificate, IpaEuiccData),
+			    store_euicc_pubkey(EumCertificate, EuiccCertificate, EidValue);
+			true ->
+			    % We need the eumCertificate and the euiccCertificate, if one of the two is missing, we can
+			    % not proceed.
+			    ok
+		    end;
+		_ ->
+		    % The message format does not contain any public key information
+		    ok
+	    end;
 	_ ->
 	    % There is already a public key stored for this eUICC
 	    ok

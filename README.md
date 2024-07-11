@@ -532,4 +532,5 @@ Example: displaying the contents of the `euicc` table on the erlang shell
 
 The eUICC public key information (`signPubKey` and `signAlgo`) can be set via the `euicc` facility of the REST API.
 However, it is not necessary to do so. In case no `signPubKey` is set, onomondo-eim will automatically learn the
-the public key information from the eUICC certificate that is exchanged during the profile download.
+the public key information from the eUICC certificate that is exchanged during a profile download or an eUICC data
+request.
