@@ -201,47 +201,43 @@ verify_cert(TrustedCert, VerifyCert) ->
 	    error
     end.
 
-store_euicc_pubkey_from_authenticateResponseOk(AuthRespOk, EidValue) ->
-    case mnesia_db:euicc_param_get(EidValue, signPubKey) of
-	{ok, <<>>} ->
-	    % There is no public key stored yet for this eUICC, use the public
-	    % key provided in the eUICC certificate
+verify_euicc_cert(EumCertificate, EuiccCertificate) ->
+    {ok, RootCiCertPath} = application:get_env(onomondo_eim, root_ci_cert),
+    {ok, RootCiCertPem} = file:read_file(RootCiCertPath),
+    [{'Certificate', RootCiCertBer, not_encrypted}] = public_key:pem_decode(RootCiCertPem),
+    {ok, RootCiCert} = 'PKIX1Explicit88':decode('Certificate', RootCiCertBer),
 
-	    {ok, RootCiCertPath} = application:get_env(onomondo_eim, root_ci_cert),
-	    {ok, RootCiCertPem} = file:read_file(RootCiCertPath),
-	    [{'Certificate', RootCiCertBer, not_encrypted}] = public_key:pem_decode(RootCiCertPem),
-	    {ok, RootCiCert} = 'PKIX1Explicit88':decode('Certificate', RootCiCertBer),
-	    EumCertificate =  maps:get(eumCertificate, AuthRespOk),
-	    EuiccCertificate = maps:get(euiccCertificate, AuthRespOk),
+    % TODO: The certificate chain validation done here only performs a basic signature validation. However, a
+    % spec compliant certifiate chain verification should include:
+    %
+    % * expiration dates: no certificate in the chain must be expired.
+    % * CRL (certificate revocation lists, indicated in the CI cert): no revoked cert should be accepted.
+    % * serial number constraint of EUM certificate: first 8 digits of EID of eUICC certificate must be within
+    %   scope of EUM certificate.
+    % * CA certificate must
+    %   - have extension for basic constraints CA=true
+    %   - have extension for key usage "keyCertSign"
+    % * EUM certificate must
+    %   - have extension for basic constraints CA=true, pathLenConstraint == 0
+    %   - have extension for key usage "keyCertSign"
+    % * eUICC certificate must
+    %   - have extension for key usage "digitalSignature"
 
-	    % TODO: The certificate chain validation done here only performs a basic signature validation. However, a
-	    % spec compliant certifiate chain verification should include:
-	    %
-	    % * expiration dates: no certificate in the chain must be expired.
-	    % * CRL (certificate revocation lists, indicated in the CI cert): no revoked cert should be accepted.
-	    % * serial number constraint of EUM certificate: first 8 digits of EID of eUICC certificate must be within
-	    %   scope of EUM certificate.
-	    % * CA certificate must
-	    %   - have extension for basic constraints CA=true
-	    %   - have extension for key usage "keyCertSign"
-	    % * EUM certificate must
-	    %   - have extension for basic constraints CA=true, pathLenConstraint == 0
-	    %   - have extension for key usage "keyCertSign"
-	    % * eUICC certificate must
-	    %   - have extension for key usage "digitalSignature"
+    case verify_cert(RootCiCert, EumCertificate) of
+	ok ->
+	    case verify_cert(EumCertificate, EuiccCertificate) of
+		ok ->
+		    ok;
+		_ ->
+		    error
+	    end;
+	_ ->
+	    error
+    end.
 
-	    Result = case verify_cert(RootCiCert, EumCertificate) of
-			 ok ->
-			     case verify_cert(EumCertificate, EuiccCertificate) of
-				 ok ->
-				     ok;
-				 _ ->
-				     error
-			     end;
-			 _ ->
-			     error
-		     end,
-
+store_euicc_pubkey(EumCertificate, EuiccCertificate, EidValue) ->
+    case verify_euicc_cert(EumCertificate, EuiccCertificate) of
+	ok ->
 	    {{'ECPoint', SignPubKey}, {namedCurve, NamedCurve}} = pubkey_from_cert(EuiccCertificate),
 	    SignAlgo = case NamedCurve of
 			   {1,2,840,10045,3,1,7} ->
@@ -251,15 +247,21 @@ store_euicc_pubkey_from_authenticateResponseOk(AuthRespOk, EidValue) ->
 			   _ ->
 			       <<"unknown">>
 		       end,
+	    ok = mnesia_db:euicc_param_set(EidValue, signPubKey, utils:binary_to_hex(SignPubKey)),
+	    ok = mnesia_db:euicc_param_set(EidValue, signAlgo, SignAlgo),
+	    ok;
+	_ ->
+	    error
+    end.
 
-	    case Result of
-		ok ->
-		    ok = mnesia_db:euicc_param_set(EidValue, signPubKey, utils:binary_to_hex(SignPubKey)),
-		    ok = mnesia_db:euicc_param_set(EidValue, signAlgo, SignAlgo),
-		    ok;
-		_ ->
-		    error
-	    end;
+store_euicc_pubkey_from_authenticateResponseOk(AuthRespOk, EidValue) ->
+    case mnesia_db:euicc_param_get(EidValue, signPubKey) of
+	{ok, <<>>} ->
+	    % There is no public key stored yet for this eUICC, use the public
+	    % key provided in the eUICC certificate
+	    EumCertificate =  maps:get(eumCertificate, AuthRespOk),
+	    EuiccCertificate = maps:get(euiccCertificate, AuthRespOk),
+	    store_euicc_pubkey(EumCertificate, EuiccCertificate, EidValue);
 	_ ->
 	    % There is already a public key stored for this eUICC
 	    ok
