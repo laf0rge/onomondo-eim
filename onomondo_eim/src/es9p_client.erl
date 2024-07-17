@@ -48,7 +48,17 @@ make_req_json(BaseUrl, Function, JsonBody) ->
 	    % TODO: verify RespHeaders: X-Admin-Protocol
 	    % TODO: verify RespHeaders: Content-Type
 	    RespBodyDecoded = case StatusCode of
-				  200 -> jiffy:decode(RespBody, [return_maps]);
+				  200 ->
+				      case RespBody of
+					  <<>> ->
+					      % Normally an empty response sent with a status code 204, (see also SGP.22
+					      % Section 6.3), but for the sake of compatibility, let's accept it anyway.
+					      logger:notice("received empty ES9+ message with status code 200 (should be 204),~nURL=~p~n",
+							    [URL]),
+					      <<>>;
+					  _ ->
+					      jiffy:decode(RespBody, [return_maps])
+				      end;
 				  _ -> <<>>
 			      end,
 	    {ok, StatusCode, RespBodyDecoded};
@@ -82,8 +92,19 @@ make_req_asn1(BaseUrl, Asn1Body) ->
 	    % TODO: verify RespHeaders: X-Admin-Protocol
 	    % TODO: verify RespHeaders: Content-Type
 	    RespBodyDecoded = case StatusCode of
-				  200 -> {ok, Asn1Decoded} = 'RSPDefinitions':decode('RemoteProfileProvisioningResponse', RespBody),
-					 Asn1Decoded;
+				  200 ->
+				      case RespBody of
+					  <<>> ->
+					      % Normally an empty response sent with a status code 204, (see also SGP.22
+					      % Section 6.3), but for the sake of compatibility, let's accept it anyway.
+					      logger:notice("received empty ES9+ message with status code 200 (should be 204),~nURL=~p~n",
+							    [URL]),
+					      <<>>;
+					  _ ->
+					      {ok, Asn1Decoded} = 'RSPDefinitions':decode('RemoteProfileProvisioningResponse',
+											  RespBody),
+					      Asn1Decoded
+				      end;
 				  _ -> <<>>
 			      end,
 	    {ok, StatusCode, RespBodyDecoded};
@@ -190,13 +211,16 @@ request_json({cancelSessionRequestEs9, CancelSessReq}, BaseUrl) ->
 request_json({handleNotification, HandleNotifReq}, BaseUrl) ->
     Json = #{<<"pendingNotification">> => rsp_enc_asn1_b64('PendingNotification', maps:get(pendingNotification, HandleNotifReq))},
     {ok, HtppStatus, _JsonResp} = make_req_json(BaseUrl, "handleNotification", Json),
+    % There is no response defined for this function (see also SGP.22, section 5.6.4), so we send just forward an
+    % an empty tuple.
     case HtppStatus of
-	200 ->
-            % There is no response defined for this function (see also SGP.22, section 5.6.4), so we send just forward an
-            % an empty tuple.
-	    {};
 	204 ->
-            % Some SMDP+ may also conclude the request, with status code 204 (No Content)
+            % SGP.22 Section 6.3: "A normal notification function execution status (MEP Notification)
+            % SHALL be indicated by the HTTP status code '204' (No Content) with an empty HTTP response body"
+	    {};
+	200 ->
+	    % Normally an SMDP+ HTTP server should not return an empty response with status code 200, but for the sake
+	    % of compatibility we will accept it anyway.
 	    {};
 	_ ->
 	    error
