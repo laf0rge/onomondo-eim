@@ -146,7 +146,7 @@ psmo_order_to_euiccPackageSigned(Order, EidValue, TransactionId) ->
     % Convert Order to PSMO list
     EuiccPackage = case Order of
 		       {[{<<"psmo">>, PsmoOrderList}]} ->
-			   PsmoList = [Order2Psmo(O) || O <- PsmoOrderList ],
+			   PsmoList = [Order2Psmo(O) || O <- PsmoOrderList],
 			   case lists:member(error, PsmoList) of
 			       true ->
 				   % At least one PSMO has failed the conversion from JSON to ASN.
