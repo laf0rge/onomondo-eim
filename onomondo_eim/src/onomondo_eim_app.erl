@@ -7,7 +7,8 @@
 -export([stop/1]).
 
 start(_Type, _Args) ->
-    logger:notice("eIM!"),
+    {ok, Vsn} = application:get_key(onomondo_eim, vsn),
+    logger:notice("eIM! version:~s~n", [Vsn]),
 
     % Startup database
     ok = mnesia_db:init(),
