@@ -24,17 +24,17 @@
 -record(rest, {resourceId :: binary(),
 	       facility :: atom(),
 	       eidValue :: binary(),
-	       order,
+	       order :: binary(),
 	       status :: atom(),
 	       timestamp :: integer(),
-	       outcome,
+	       outcome :: binary(),
 	       debuginfo :: binary()}).
 -record(work, {pid :: pid(),
 	       resourceId :: binary(),
 	       transactionId :: binary(),
 	       eidValue :: binary(),
-	       order,
-	       state}).
+	       order :: binary(),
+	       state :: binary()}).
 -record(euicc, {eidValue :: binary(),
 		counterValue :: integer(),
 		consumerEuicc :: boolean(),
