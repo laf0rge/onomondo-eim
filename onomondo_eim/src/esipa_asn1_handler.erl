@@ -311,9 +311,11 @@ handle_asn1(Req0, _State, {provideEimPackageResult, EsipaReq}) ->
     {provideEimPackageResultResponse, undefined};
 
 %Unsupported request
-handle_asn1(_Req0, _State, _Data) ->
-    %cowboy_req:reply(400, ?RESPONSE_HEADERS, <<"Unsupported Request">>, Req0).
-    undefined.
+handle_asn1(Req0, _State, Request) ->
+    mnesia_db:work_finish(maps:get(pid, Req0), [{[{procedureError, abortedOrder}]}], unsupported),
+    logger:info("Handling of IPAd request failed, the request type is unsupported,~nRequest=~p,~nPid=~p~n",
+		[Request, maps:get(pid, Req0)]),
+    cowboy_req:reply(400, ?RESPONSE_HEADERS, <<"Unsupported Request">>, Req0).
 
 % The ASN.1 encoder that is generated using erlang's (asn1ct) encodes an additional constructed tag in front of the
 % actual EsipaMessageFromEimToIpa. This is probably due to the fact that EsipaMessageFromEimToIpa is a choice
