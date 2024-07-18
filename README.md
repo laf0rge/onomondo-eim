@@ -644,7 +644,7 @@ API the behavior will not be any different, except that the `status` will change
 all changes to the `euicc` table are made accordingly, we should get a result like this:
 
 ```
-{"status": "done", "timestamp": "1721309044", "resource": {"eidValue": "89044045118427484800000000011628", "order": {"euicc": [{"counterValue": 1000}, {"consumerEuicc": false}, {"signAlgo": "prime256v1"}, {"signPubKey": "04BD2C55B28B4E801CA0B14F195788FD86C7FF49764C88A2934C69594A26FF647549F3F16060BD9C8D793D95D0126FA429C94966FE7842967263795A73C498F1DB"}]}}, "outcome": [{"euiccUpdateResult": "ok"}], "debuginfo": "836400046E6F6E65"}
+{"status": "done", "timestamp": "1721309044", "resource": {"eidValue": "12345678900000000000000000001234", "order": {"euicc": [{"counterValue": 1000}, {"consumerEuicc": false}, {"signAlgo": "prime256v1"}, {"signPubKey": "04BD2C55B28B4E801CA0B14F195788FD86C7FF49764C88A2934C69594A26FF647549F3F16060BD9C8D793D95D0126FA429C94966FE7842967263795A73C498F1DB"}]}}, "outcome": [{"euiccUpdateResult": "ok"}], "debuginfo": "836400046E6F6E65"}
 ```
 
 Now the eIM will treat the eUICC as a native IoT eUICC, a proper public key set and the counter value is high enough
