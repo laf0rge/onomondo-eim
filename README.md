@@ -603,7 +603,7 @@ We can see that there are two profile installed `989444999999990920F3` and `9894
 ### Performing an eUICC Data Request
 
 The eUICC data Request is a special operation, that allows the eIM to request some important master data from the eUICC.
-(see also GSMA SGP.32, section 2.11.1.2) This includes the EUM and the eUICC certificate that is requred to
+(see also GSMA SGP.32, section 2.11.1.2) This includes the EUM and the eUICC certificate that is required to
 authenticate eCO and PSMO responses. The order takes a `tagList` as input, which describes what kind of data to request.
 The exact meaning of the tags can be found in the aforementioned spec reference.
 
@@ -640,7 +640,7 @@ We would edit the order into tryme_set_euicc_param.sh and run the script:
 ```
 
 The order will execute as an internal process. This means that no IPAd interaction is involved. However, on the REST
-API the behaviour will not be any different, except that the `status` will change from `new` to `done` directly. When
+API the behavior will not be any different, except that the `status` will change from `new` to `done` directly. When
 all changes to the `euicc` table are made accordingly, we should get a result like this:
 
 ```
