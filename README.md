@@ -600,7 +600,7 @@ As soon as the IPAd has fetched and executed the related eUICC package, the JSON
 We can see that there are two profile installed `989444999999990920F3` and `989444999999990930F1`. We also can see that
 `989444999999990920F3` is currently enabled.
 
-#### Performing an eUICC Data Request
+### Performing an eUICC Data Request
 
 The eUICC data Request is a special operation, that allows the eIM to request some important master data from the eUICC.
 (see also GSMA SGP.32, section 2.11.1.2) This includes the EUM and the eUICC certificate that is requred to
@@ -623,10 +623,10 @@ of a single primitive type (e.g. `associationToken`).
 
 ### Setting a Parameters in the `euicc` Table
 
-Even though the `euicc` table is populated automatically, it may still be that the API user wants to adjust certain
-parameters. Let's assume that we have a setup that mostly uses consumer eUICCs in an IoT emulation mode. Now we want
-to add a native IoT eUICC. Let's say the card uses a root CI that we do not have configured in `sys.config` yet, but
-we have the public key. Also the card has been used for experiments with PSMOs already, so the counterValue is
+Even though the `euicc` table is populated automatically, it may still be that the REST API user wants to adjust
+certain parameters. Let's assume that we have a setup that mostly uses consumer eUICCs in an IoT emulation mode. Now we
+want to add a native IoT eUICC. Let's say the card uses a root CI that we do not have configured in `sys.config` yet,
+but we have the public key. Also the card has been used for experiments with PSMOs already, so the counterValue is
 somewhere in the upper three digits range and not at 1 as it would be for a virgin eUICC.
 
 In this case we would craft an order like this:
