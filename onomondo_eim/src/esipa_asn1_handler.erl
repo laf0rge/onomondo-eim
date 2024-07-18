@@ -364,7 +364,7 @@ terminate(Reason, Req0, _State) ->
         normal ->
 	    ok;
 	_ ->
-	    mnesia_db:work_finish(maps:get(pid, Req0), [{[{procedureError, undefinedError}]}], Reason),
+	    mnesia_db:work_finish(maps:get(pid, Req0), [{[{procedureError, abortedOrder}]}], Reason),
 	    logger:info("Handling of IPAd request terminated unexpectetly, Reason=~p Pid=~p~n",
 			[Reason, maps:get(pid, Req0)]),
 	    cowboy_req:reply(500, ?RESPONSE_HEADERS, <<"Internal Server Error">>, Req0)
